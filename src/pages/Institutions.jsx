@@ -7,7 +7,7 @@ export default function Institutions() {
   const { instituciones, loading, fetchInstituciones, createInstitucion, updateInstitucion, deleteInstitucion } = useInstitutionStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState(null);
-  const [meta, setMeta] = useState({ estados: [], congregaciones: [] });
+  const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [] });
   
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
@@ -164,10 +164,9 @@ export default function Institutions() {
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
                   <option value="">Seleccionar</option>
-                  <option value="escuela">Escuela</option>
-                  <option value="hospital">Hospital</option>
-                  <option value="centro">Centro Comunitario</option>
-                  <option value="otro">Otro</option>
+                  {meta.tipos.map(tipo => (
+                    <option key={tipo} value={tipo}>{tipo}</option>
+                  ))}
                 </select>
               </div>
 

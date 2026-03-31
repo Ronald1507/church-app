@@ -5,9 +5,9 @@ import api from '../services/api';
 const getAllowedTabs = (nivel) => {
   switch (nivel) {
     case 'SUPERADMIN':
-      return ['dashboard', 'members', 'ministries', 'finances', 'events', 'inventory', 'institutions', 'users', 'congregations'];
+      return ['dashboard', 'members', 'institutions', 'finances', 'events', 'inventory', 'users', 'congregations'];
     case 'ADMIN':
-      return ['dashboard', 'members', 'ministries', 'finances', 'events', 'inventory', 'institutions'];
+      return ['dashboard', 'members', 'institutions', 'finances', 'events', 'inventory'];
     case 'USUARIO':
       return ['dashboard', 'events', 'profile'];
     default:
@@ -56,11 +56,15 @@ export const useAuthStore = create((set, get) => ({
   fetchUser: async () => {
     try {
       const response = await api.get('/auth/me');
+      console.log('/auth/me response:', response.data);
       const user = response.data;
-      const nivel = user.nivel || 'USUARIO';
+      const nivel = user.nivel || user.role || 'USUARIO';
+      console.log('nivel determined:', nivel);
       const allowedTabs = getAllowedTabs(nivel);
+      console.log('allowedTabs:', allowedTabs);
       set({ user, nivel, allowedTabs });
     } catch (error) {
+      console.error('fetchUser error:', error);
       get().logout();
     }
   },

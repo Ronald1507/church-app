@@ -35,9 +35,9 @@ export default function Layout() {
                     Miembros
                   </Link>
                 )}
-                {canAccess('ministries') && (
-                  <Link to="/ministries" className="hover:bg-indigo-700 px-3 py-2 rounded">
-                    Ministerios
+                {canAccess('institutions') && (
+                  <Link to="/institutions" className="hover:bg-indigo-700 px-3 py-2 rounded">
+                    Instituciones
                   </Link>
                 )}
                 {canAccess('congregations') && canManageCongregations && (
@@ -63,11 +63,6 @@ export default function Layout() {
                 {canAccess('inventory') && (
                   <Link to="/inventory" className="hover:bg-indigo-700 px-3 py-2 rounded">
                     Inventario
-                  </Link>
-                )}
-                {canAccess('institutions') && (
-                  <Link to="/institutions" className="hover:bg-indigo-700 px-3 py-2 rounded">
-                    Instituciones
                   </Link>
                 )}
               </div>

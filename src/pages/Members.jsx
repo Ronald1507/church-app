@@ -7,7 +7,7 @@ export default function Members() {
   const { members, loading, fetchMembers, createMember, updateMember, deleteMember } = useMemberStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
-  const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [], ministerios: [] });
+  const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [], instituciones: [] });
   
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
@@ -18,7 +18,7 @@ export default function Members() {
 
   const fetchMeta = async () => {
     try {
-      const response = await api.get('/miembros/meta');
+      const response = await api.get('/miembros/opciones');
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);
@@ -31,8 +31,7 @@ export default function Members() {
       ...data,
       id_estado: parseInt(data.id_estado),
       id_congregacion: parseInt(data.id_congregacion),
-      id_tipo_miembro: parseInt(data.id_tipo_miembro),
-      id_ministerio: data.id_ministerio ? parseInt(data.id_ministerio) : null
+      id_tipo_miembro: parseInt(data.id_tipo_miembro)
     };
 
     let result;
@@ -53,14 +52,13 @@ export default function Members() {
     setEditingMember(member);
     // Set all form values
     Object.keys(member).forEach(key => {
-      if (key !== 'estado' && key !== 'congregacion' && key !== 'tipoMiembro' && key !== 'ministerio') {
+      if (key !== 'estado' && key !== 'congregacion' && key !== 'tipoMiembro' && key !== 'miembroInstitucions') {
         setValue(key, member[key]);
       }
     });
     setValue('id_estado', member.id_estado);
     setValue('id_congregacion', member.id_congregacion);
     setValue('id_tipo_miembro', member.id_tipo_miembro);
-    setValue('id_ministerio', member.id_ministerio || '');
     setIsModalOpen(true);
   };
 
@@ -75,8 +73,7 @@ export default function Members() {
     reset({
       id_estado: '',
       id_congregacion: '',
-      id_tipo_miembro: '',
-      id_ministerio: ''
+      id_tipo_miembro: ''
     });
     setIsModalOpen(true);
   };
@@ -306,14 +303,14 @@ export default function Members() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Ministerio</label>
+                <label className="block text-sm font-medium text-gray-700">Institución (opcional)</label>
                 <select
-                  {...register('id_ministerio')}
+                  {...register('id_institucion')}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
-                  <option value="">Sin ministry</option>
-                  {meta.ministerios.map(min => (
-                    <option key={min.id_ministerio} value={min.id_ministerio}>{min.nombre}</option>
+                  <option value="">Sin institución</option>
+                  {meta.instituciones.map(inst => (
+                    <option key={inst.id_institucion} value={inst.id_institucion}>{inst.nombre}</option>
                   ))}
                 </select>
               </div>
