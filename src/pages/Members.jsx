@@ -1,23 +1,45 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMemberStore } from '../store/memberStore';
+import api from '../services/api';
 
 export default function Members() {
   const { members, loading, fetchMembers, createMember, updateMember, deleteMember } = useMemberStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [], ministerios: [] });
+  
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
   useEffect(() => {
     fetchMembers();
+    fetchMeta();
   }, []);
 
+  const fetchMeta = async () => {
+    try {
+      const response = await api.get('/miembros/meta');
+      setMeta(response.data);
+    } catch (error) {
+      console.error('Error fetching meta:', error);
+    }
+  };
+
   const onSubmit = async (data) => {
+    // Convertir campos numéricos
+    const payload = {
+      ...data,
+      id_estado: parseInt(data.id_estado),
+      id_congregacion: parseInt(data.id_congregacion),
+      id_tipo_miembro: parseInt(data.id_tipo_miembro),
+      id_ministerio: data.id_ministerio ? parseInt(data.id_ministerio) : null
+    };
+
     let result;
     if (editingMember) {
-      result = await updateMember(editingMember.id, data);
+      result = await updateMember(editingMember.id_miembro, payload);
     } else {
-      result = await createMember(data);
+      result = await createMember(payload);
     }
     
     if (result.success) {
@@ -29,7 +51,16 @@ export default function Members() {
 
   const handleEdit = (member) => {
     setEditingMember(member);
-    reset(member);
+    // Set all form values
+    Object.keys(member).forEach(key => {
+      if (key !== 'estado' && key !== 'congregacion' && key !== 'tipoMiembro' && key !== 'ministerio') {
+        setValue(key, member[key]);
+      }
+    });
+    setValue('id_estado', member.id_estado);
+    setValue('id_congregacion', member.id_congregacion);
+    setValue('id_tipo_miembro', member.id_tipo_miembro);
+    setValue('id_ministerio', member.id_ministerio || '');
     setIsModalOpen(true);
   };
 
@@ -41,8 +72,18 @@ export default function Members() {
 
   const openCreateModal = () => {
     setEditingMember(null);
-    reset();
+    reset({
+      id_estado: '',
+      id_congregacion: '',
+      id_tipo_miembro: '',
+      id_ministerio: ''
+    });
     setIsModalOpen(true);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('es-CL');
   };
 
   return (
@@ -59,23 +100,43 @@ export default function Members() {
 
       {loading ? (
         <p>Cargando...</p>
+      ) : members.length === 0 ? (
+        <p className="text-gray-500">No hay miembros registrados</p>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">RUT</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {members.map((member) => (
-                <tr key={member.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{member.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{member.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{member.phone}</td>
+                <tr key={member.id_miembro}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {member.nombres} {member.apellidos}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{member.rut || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{member.email || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{member.telefono || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {member.tipoMiembro?.nombre || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      member.estado?.nombre === 'Activo' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {member.estado?.nombre || '-'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => handleEdit(member)}
@@ -84,7 +145,7 @@ export default function Members() {
                       Editar
                     </button>
                     <button
-                      onClick={() => handleDelete(member.id)}
+                      onClick={() => handleDelete(member.id_miembro)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Eliminar
@@ -99,40 +160,165 @@ export default function Members() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
               {editingMember ? 'Editar Miembro' : 'Nuevo Miembro'}
             </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                <input
-                  {...register('name', { required: 'Nombre requerido' })}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-                {errors.name && <span className="text-red-500 text-sm">{errors.name.message}</span>}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Nombres *</label>
+                  <input
+                    {...register('nombres', { required: 'Nombres requeridos' })}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                  {errors.nombres && <span className="text-red-500 text-sm">{errors.nombres.message}</span>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Apellidos *</label>
+                  <input
+                    {...register('apellidos', { required: 'Apellidos requeridos' })}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                  {errors.apellidos && <span className="text-red-500 text-sm">{errors.apellidos.message}</span>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">RUT</label>
+                  <input
+                    {...register('rut')}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                    placeholder="12345678-9"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
+                  <input
+                    type="date"
+                    {...register('fecha_nacimiento')}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Género</label>
+                  <select
+                    {...register('genero')}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Seleccionar</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Estado Civil</label>
+                  <select
+                    {...register('estado_civil')}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Seleccionar</option>
+                    <option value="soltero">Soltero</option>
+                    <option value="casado">Casado</option>
+                    <option value="divorciado">Divorciado</option>
+                    <option value="viudo">Viudo</option>
+                  </select>
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Email</label>
                 <input
                   type="email"
-                  {...register('email', { required: 'Email requerido' })}
+                  {...register('email')}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
-                {errors.email && <span className="text-red-500 text-sm">{errors.email.message}</span>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Teléfono</label>
+                  <input
+                    {...register('telefono')}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Dirección</label>
+                  <input
+                    {...register('direccion')}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Tipo de Miembro *</label>
+                  <select
+                    {...register('id_tipo_miembro', { required: 'Tipo requerido' })}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Seleccionar</option>
+                    {meta.tipos.map(tipo => (
+                      <option key={tipo.id_tipo} value={tipo.id_tipo}>{tipo.nombre}</option>
+                    ))}
+                  </select>
+                  {errors.id_tipo_miembro && <span className="text-red-500 text-sm">{errors.id_tipo_miembro.message}</span>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Estado *</label>
+                  <select
+                    {...register('id_estado', { required: 'Estado requerido' })}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Seleccionar</option>
+                    {meta.estados.map(estado => (
+                      <option key={estado.id_estado} value={estado.id_estado}>{estado.nombre}</option>
+                    ))}
+                  </select>
+                  {errors.id_estado && <span className="text-red-500 text-sm">{errors.id_estado.message}</span>}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Teléfono</label>
-                <input
-                  {...register('phone')}
+                <label className="block text-sm font-medium text-gray-700">Congregación *</label>
+                <select
+                  {...register('id_congregacion', { required: 'Congregación requerida' })}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
+                >
+                  <option value="">Seleccionar</option>
+                  {meta.congregaciones.map(cong => (
+                    <option key={cong.id_congregacion} value={cong.id_congregacion}>{cong.nombre}</option>
+                  ))}
+                </select>
+                {errors.id_congregacion && <span className="text-red-500 text-sm">{errors.id_congregacion.message}</span>}
               </div>
 
-              <div className="flex gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Ministerio</label>
+                <select
+                  {...register('id_ministerio')}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Sin ministry</option>
+                  {meta.ministerios.map(min => (
+                    <option key={min.id_ministerio} value={min.id_ministerio}>{min.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-4 pt-4">
                 <button
                   type="submit"
                   className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"

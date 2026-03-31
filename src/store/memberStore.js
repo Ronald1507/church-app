@@ -9,7 +9,7 @@ export const useMemberStore = create((set) => ({
   fetchMembers: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/members');
+      const response = await api.get('/miembros');
       set({ members: response.data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -19,7 +19,7 @@ export const useMemberStore = create((set) => ({
   createMember: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post('/members', data);
+      const response = await api.post('/miembros', data);
       set((state) => ({ 
         members: [...state.members, response.data], 
         loading: false 
@@ -27,37 +27,37 @@ export const useMemberStore = create((set) => ({
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.message };
+      return { success: false, message: error.response?.data?.error };
     }
   },
 
   updateMember: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.put(`/members/${id}`, data);
+      const response = await api.put(`/miembros/${id}`, data);
       set((state) => ({
-        members: state.members.map((m) => (m.id === id ? response.data : m)),
+        members: state.members.map((m) => (m.id_miembro === id ? response.data : m)),
         loading: false,
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.message };
+      return { success: false, message: error.response?.data?.error };
     }
   },
 
   deleteMember: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/members/${id}`);
+      await api.delete(`/miembros/${id}`);
       set((state) => ({
-        members: state.members.filter((m) => m.id !== id),
+        members: state.members.filter((m) => m.id_miembro !== id),
         loading: false,
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.message };
+      return { success: false, message: error.response?.data?.error };
     }
   },
 }));

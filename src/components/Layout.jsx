@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
 export default function Layout({ children }) {
@@ -50,7 +50,7 @@ export default function Layout({ children }) {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto py-6">
-        {children}
+        <Outlet />
       </main>
     </div>
   );
