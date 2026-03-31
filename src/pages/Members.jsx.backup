@@ -26,6 +26,7 @@ export default function Members() {
   };
 
   const onSubmit = async (data) => {
+    // Convertir campos numéricos
     const payload = {
       ...data,
       id_estado: parseInt(data.id_estado),
@@ -49,6 +50,7 @@ export default function Members() {
 
   const handleEdit = (member) => {
     setEditingMember(member);
+    // Set all form values
     Object.keys(member).forEach(key => {
       if (key !== 'estado' && key !== 'congregacion' && key !== 'tipoMiembro' && key !== 'miembroInstitucions') {
         setValue(key, member[key]);
@@ -101,8 +103,7 @@ export default function Members() {
             className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
           >
             Agregar Miembro
-          </button>
-        </div>
+        </button>
       </div>
 
       {loading ? (
@@ -141,27 +142,27 @@ export default function Members() {
                   >
                     Editar
                   </button>
-                  {member.id_estado === 6 ? (
+                  {member.estado?.nombre === 'Activo' ? (
                     <button
-                      onClick={async () => {
-                        if (confirm('¿Activar este miembro?')) {
-                          await toggleMemberStatus(member.id_miembro);
-                        }
-                      }}
-                      className="text-green-600 hover:text-green-900 text-sm"
-                    >
-                      Activar
-                    </button>
-                  ) : (
-                    <button
-                      onClick={async () => {
+                      onClick={() => {
                         if (confirm('¿Inactivar este miembro?')) {
-                          await toggleMemberStatus(member.id_miembro);
+                          toggleMemberStatus(member.id_miembro);
                         }
                       }}
                       className="text-orange-600 hover:text-orange-900 text-sm"
                     >
                       Inactivar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (confirm('¿Activar este miembro?')) {
+                          toggleMemberStatus(member.id_miembro);
+                        }
+                      }}
+                      className="text-green-600 hover:text-green-900 text-sm"
+                    >
+                      Activar
                     </button>
                   )}
                 </div>
@@ -171,6 +172,7 @@ export default function Members() {
         </div>
       )}
 
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
