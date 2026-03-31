@@ -1,27 +1,27 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export const useEventStore = create((set) => ({
-  eventos: [],
+export const useMinistryStore = create((set) => ({
+  ministerios: [],
   loading: false,
   error: null,
 
-  fetchEventos: async () => {
+  fetchMinisterios: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/eventos');
-      set({ eventos: response.data, loading: false });
+      const response = await api.get('/ministerios');
+      set({ ministerios: response.data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
     }
   },
 
-  createEvento: async (data) => {
+  createMinisterio: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post('/eventos', data);
+      const response = await api.post('/ministerios', data);
       set((state) => ({ 
-        eventos: [...state.eventos, response.data], 
+        ministerios: [...state.ministerios, response.data], 
         loading: false 
       }));
       return { success: true };
@@ -31,12 +31,12 @@ export const useEventStore = create((set) => ({
     }
   },
 
-  updateEvento: async (id, data) => {
+  updateMinisterio: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.put(`/eventos/${id}`, data);
+      const response = await api.put(`/ministerios/${id}`, data);
       set((state) => ({
-        eventos: state.eventos.map((e) => (e.id_evento === id ? response.data : e)),
+        ministerios: state.ministerios.map((m) => (m.id_ministerio === id ? response.data : m)),
         loading: false,
       }));
       return { success: true };
@@ -46,12 +46,12 @@ export const useEventStore = create((set) => ({
     }
   },
 
-  deleteEvento: async (id) => {
+  deleteMinisterio: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/eventos/${id}`);
+      await api.delete(`/ministerios/${id}`);
       set((state) => ({
-        eventos: state.eventos.filter((e) => e.id_evento !== id),
+        ministerios: state.ministerios.filter((m) => m.id_ministerio !== id),
         loading: false,
       }));
       return { success: true };

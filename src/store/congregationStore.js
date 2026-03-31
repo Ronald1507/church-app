@@ -1,27 +1,27 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export const useEventStore = create((set) => ({
-  eventos: [],
+export const useCongregationStore = create((set) => ({
+  congregaciones: [],
   loading: false,
   error: null,
 
-  fetchEventos: async () => {
+  fetchCongregaciones: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/eventos');
-      set({ eventos: response.data, loading: false });
+      const response = await api.get('/congregaciones');
+      set({ congregaciones: response.data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
     }
   },
 
-  createEvento: async (data) => {
+  createCongregacion: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post('/eventos', data);
+      const response = await api.post('/congregaciones', data);
       set((state) => ({ 
-        eventos: [...state.eventos, response.data], 
+        congregaciones: [...state.congregaciones, response.data], 
         loading: false 
       }));
       return { success: true };
@@ -31,12 +31,12 @@ export const useEventStore = create((set) => ({
     }
   },
 
-  updateEvento: async (id, data) => {
+  updateCongregacion: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.put(`/eventos/${id}`, data);
+      const response = await api.put(`/congregaciones/${id}`, data);
       set((state) => ({
-        eventos: state.eventos.map((e) => (e.id_evento === id ? response.data : e)),
+        congregaciones: state.congregaciones.map((c) => (c.id_congregacion === id ? response.data : c)),
         loading: false,
       }));
       return { success: true };
@@ -46,12 +46,12 @@ export const useEventStore = create((set) => ({
     }
   },
 
-  deleteEvento: async (id) => {
+  deleteCongregacion: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/eventos/${id}`);
+      await api.delete(`/congregaciones/${id}`);
       set((state) => ({
-        eventos: state.eventos.filter((e) => e.id_evento !== id),
+        congregaciones: state.congregaciones.filter((c) => c.id_congregacion !== id),
         loading: false,
       }));
       return { success: true };

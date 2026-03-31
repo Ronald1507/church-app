@@ -1,27 +1,27 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export const useEventStore = create((set) => ({
-  eventos: [],
+export const useUserStore = create((set) => ({
+  usuarios: [],
   loading: false,
   error: null,
 
-  fetchEventos: async () => {
+  fetchUsuarios: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/eventos');
-      set({ eventos: response.data, loading: false });
+      const response = await api.get('/usuarios');
+      set({ usuarios: response.data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
     }
   },
 
-  createEvento: async (data) => {
+  createUsuario: async (data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post('/eventos', data);
+      const response = await api.post('/usuarios', data);
       set((state) => ({ 
-        eventos: [...state.eventos, response.data], 
+        usuarios: [...state.usuarios, response.data], 
         loading: false 
       }));
       return { success: true };
@@ -31,12 +31,12 @@ export const useEventStore = create((set) => ({
     }
   },
 
-  updateEvento: async (id, data) => {
+  updateUsuario: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.put(`/eventos/${id}`, data);
+      const response = await api.put(`/usuarios/${id}`, data);
       set((state) => ({
-        eventos: state.eventos.map((e) => (e.id_evento === id ? response.data : e)),
+        usuarios: state.usuarios.map((u) => (u.id_usuario === id ? response.data : u)),
         loading: false,
       }));
       return { success: true };
@@ -46,12 +46,12 @@ export const useEventStore = create((set) => ({
     }
   },
 
-  deleteEvento: async (id) => {
+  deleteUsuario: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/eventos/${id}`);
+      await api.delete(`/usuarios/${id}`);
       set((state) => ({
-        eventos: state.eventos.filter((e) => e.id_evento !== id),
+        usuarios: state.usuarios.filter((u) => u.id_usuario !== id),
         loading: false,
       }));
       return { success: true };

@@ -1,7 +1,7 @@
 import { Link, useNavigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
-export default function Layout({ children }) {
+export default function Layout() {
   const { logout, user } = useAuthStore();
   const navigate = useNavigate();
 
@@ -27,11 +27,26 @@ export default function Layout({ children }) {
                 <Link to="/members" className="hover:bg-indigo-700 px-3 py-2 rounded">
                   Miembros
                 </Link>
+                <Link to="/ministries" className="hover:bg-indigo-700 px-3 py-2 rounded">
+                  Ministerios
+                </Link>
+                <Link to="/congregations" className="hover:bg-indigo-700 px-3 py-2 rounded">
+                  Congregaciones
+                </Link>
                 <Link to="/finances" className="hover:bg-indigo-700 px-3 py-2 rounded">
                   Finanzas
                 </Link>
                 <Link to="/events" className="hover:bg-indigo-700 px-3 py-2 rounded">
                   Eventos
+                </Link>
+                <Link to="/users" className="hover:bg-indigo-700 px-3 py-2 rounded">
+                  Usuarios
+                </Link>
+                <Link to="/inventory" className="hover:bg-indigo-700 px-3 py-2 rounded">
+                  Inventario
+                </Link>
+                <Link to="/institutions" className="hover:bg-indigo-700 px-3 py-2 rounded">
+                  Instituciones
                 </Link>
               </div>
             </div>
