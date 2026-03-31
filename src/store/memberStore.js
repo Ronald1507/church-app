@@ -10,9 +10,11 @@ export const useMemberStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.get('/miembros');
-      set({ members: response.data, loading: false });
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ members: data, loading: false });
     } catch (error) {
-      set({ error: error.message, loading: false });
+      console.error('Error fetching members:', error);
+      set({ error: error.message, loading: false, members: [] });
     }
   },
 

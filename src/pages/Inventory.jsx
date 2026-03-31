@@ -78,76 +78,68 @@ export default function Inventory() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Inventario</h1>
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-xl md:text-2xl font-bold">Inventario</h1>
         <button
           onClick={openCreateModal}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
         >
           Agregar Item
         </button>
       </div>
 
       {loading ? (
-        <p>Cargando...</p>
+        <p className="text-center py-8">Cargando...</p>
       ) : items.length === 0 ? (
-        <p className="text-gray-500">No hay items en el inventario</p>
+        <p className="text-gray-500 text-center py-8">No hay items en el inventario</p>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Unit.</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ubicación</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {items.map((item) => (
-                <tr key={item.id_item}>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{item.nombre}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.codigo || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.categoria || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded text-sm ${
-                      item.cantidad > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        <div className="space-y-4">
+          {items.map((item) => (
+            <div key={item.id_item} className="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">{item.nombre}</h3>
+                  <p className="text-sm text-gray-500">{item.categoria || 'Sin categoría'}</p>
+                  <div className="flex gap-4 mt-2 text-sm">
+                    <span>Cantidad: <strong>{item.cantidad}</strong></span>
+                    <span>Valor: <strong>{formatCurrency(item.valor_unitario)}</strong></span>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      item.estado?.nombre === 'Activo' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {item.cantidad} {item.unidad_medida}
+                      {item.estado?.nombre || '-'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.valor_unitario)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.ubicacion || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id_item)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 ml-4">
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="text-indigo-600 hover:text-indigo-900 text-sm"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id_item)}
+                    className="text-red-600 hover:text-red-900 text-sm"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-bold mb-4">
               {editingItem ? 'Editar Item' : 'Nuevo Item'}
             </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -160,7 +152,7 @@ export default function Inventory() {
                 {errors.nombre && <span className="text-red-500 text-sm">{errors.nombre.message}</span>}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Código</label>
                   <input
@@ -189,7 +181,7 @@ export default function Inventory() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Cantidad</label>
                   <input
@@ -215,7 +207,7 @@ export default function Inventory() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Valor Unitario</label>
                   <input
@@ -236,7 +228,7 @@ export default function Inventory() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Congregación *</label>
                   <select
@@ -266,7 +258,7 @@ export default function Inventory() {
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
                   type="submit"
                   className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"

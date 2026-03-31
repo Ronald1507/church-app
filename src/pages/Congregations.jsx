@@ -70,68 +70,57 @@ export default function Congregations() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Congregaciones</h1>
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-xl md:text-2xl font-bold">Congregaciones</h1>
         <button
           onClick={openCreateModal}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
         >
           Agregar Congregación
         </button>
       </div>
 
       {loading ? (
-        <p>Cargando...</p>
+        <p className="text-center py-8">Cargando...</p>
       ) : congregaciones.length === 0 ? (
-        <p className="text-gray-500">No hay congregaciones registradas</p>
+        <p className="text-gray-500 text-center py-8">No hay congregaciones registradas</p>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ciudad</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {congregaciones.map((cong) => (
-                <tr key={cong.id_congregacion}>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{cong.nombre}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{cong.ciudad || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{cong.telefono || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{cong.email || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      cong.estado?.nombre === 'Congregación activa' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {cong.estado?.nombre || '-'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleEdit(cong)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(cong.id_congregacion)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {congregaciones.map((cong) => (
+            <div key={cong.id_congregacion} className="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">{cong.nombre}</h3>
+                  <p className="text-sm text-gray-500">{cong.direccion || 'Sin dirección'}</p>
+                  <p className="text-sm text-gray-500">{cong.pastor?.nombres} {cong.pastor?.apellidos}</p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => handleEdit(cong)}
+                    className="text-indigo-600 hover:text-indigo-900 text-sm"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(cong.id_congregacion)}
+                    className="text-red-600 hover:text-red-900 text-sm"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+              <div className="mt-2">
+                <span className={`px-2 py-1 text-xs rounded-full ${
+                  cong.estado?.nombre === 'Activo' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {cong.estado?.nombre || '-'}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -160,7 +149,7 @@ export default function Congregations() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Ciudad</label>
                   <input
@@ -178,7 +167,7 @@ export default function Congregations() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Teléfono</label>
                   <input
@@ -211,7 +200,7 @@ export default function Congregations() {
                 {errors.id_estado && <span className="text-red-500 text-sm">{errors.id_estado.message}</span>}
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
                   type="submit"
                   className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"

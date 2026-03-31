@@ -76,78 +76,70 @@ export default function Users() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Usuarios del Sistema</h1>
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-xl md:text-2xl font-bold">Usuarios</h1>
         <button
           onClick={openCreateModal}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
         >
           Agregar Usuario
         </button>
       </div>
 
       {loading ? (
-        <p>Cargando...</p>
+        <p className="text-center py-8">Cargando...</p>
       ) : usuarios.length === 0 ? (
-        <p className="text-gray-500">No hay usuarios registrados</p>
+        <p className="text-gray-500 text-center py-8">No hay usuarios registrados</p>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {usuarios.map((user) => (
-                <tr key={user.id_usuario}>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{user.username}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+        <div className="space-y-4">
+          {usuarios.map((user) => (
+            <div key={user.id_usuario} className="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">{user.username}</h3>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                  <div className="flex gap-2 mt-2">
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
                       {user.rol?.nombre || '-'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
+                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded">
+                      {user.congregacion?.nombre || '-'}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded ${
                       user.estado?.nombre === 'Activo' 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-gray-100 text-gray-800'
                     }`}>
                       {user.estado?.nombre || '-'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleEdit(user)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(user.id_usuario)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 ml-4">
+                  <button
+                    onClick={() => handleEdit(user)}
+                    className="text-indigo-600 hover:text-indigo-900 text-sm"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(user.id_usuario)}
+                    className="text-red-600 hover:text-red-900 text-sm"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-lg">
-            <h2 className="text-xl font-bold mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-bold mb-4">
               {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
             </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -183,7 +175,7 @@ export default function Users() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Rol *</label>
                   <select
@@ -228,7 +220,7 @@ export default function Users() {
                 </select>
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
                   type="submit"
                   className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"

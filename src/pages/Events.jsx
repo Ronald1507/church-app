@@ -77,68 +77,64 @@ export default function Events() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Eventos</h1>
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-xl md:text-2xl font-bold">Eventos</h1>
         <button
           onClick={openCreateModal}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
         >
           Agregar Evento
         </button>
       </div>
 
       {loading ? (
-        <p>Cargando...</p>
+        <p className="text-center py-8">Cargando...</p>
       ) : eventos.length === 0 ? (
-        <p className="text-gray-500">No hay eventos registrados</p>
+        <p className="text-gray-500 text-center py-8">No hay eventos registrados</p>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Inicio</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lugar</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Congregación</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {eventos.map((event) => (
-                <tr key={event.id_evento}>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{event.nombre}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{event.tipo || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{formatDate(event.fecha_inicio)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{event.lugar || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{event.congregacion?.nombre || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleEdit(event)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(event.id_evento)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-4">
+          {eventos.map((event) => (
+            <div key={event.id_evento} className="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">{event.nombre}</h3>
+                  <p className="text-sm text-gray-500">{formatDate(event.fecha_inicio)}</p>
+                  <p className="text-sm text-gray-500">{event.lugar || 'Sin lugar'}</p>
+                  <div className="flex gap-2 mt-2">
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                      {event.tipo || '-'}
+                    </span>
+                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded">
+                      {event.congregacion?.nombre || '-'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 ml-4">
+                  <button
+                    onClick={() => handleEdit(event)}
+                    className="text-indigo-600 hover:text-indigo-900 text-sm"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(event.id_evento)}
+                    className="text-red-600 hover:text-red-900 text-sm"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-bold mb-4">
               {editingEvent ? 'Editar Evento' : 'Nuevo Evento'}
             </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -151,7 +147,7 @@ export default function Events() {
                 {errors.nombre && <span className="text-red-500 text-sm">{errors.nombre.message}</span>}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Tipo</label>
                   <select
@@ -187,7 +183,7 @@ export default function Events() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Fecha Inicio *</label>
                   <input
@@ -216,7 +212,7 @@ export default function Events() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Congregación *</label>
                   <select
@@ -246,7 +242,7 @@ export default function Events() {
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
                   type="submit"
                   className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
