@@ -6,15 +6,42 @@ export const useFinanceStore = create((set, get) => ({
   transacciones: [],
   loading: false,
   error: null,
+  estados: [], // Estados desde la DB
+  filtroEstado: null, // Estado actualmente seleccionado
 
   // Cuentas
   fetchCuentas: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/finanzas/cuentas');
-      set({ cuentas: response.data, loading: false });
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ cuentas: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
+    }
+  },
+
+  fetchEstados: async () => {
+    try {
+      const response = await api.get('/finanzas/meta');
+      const estados = response.data.estados || [];
+      set({ estados });
+      return estados;
+    } catch (error) {
+      console.error('Error fetching estados:', error);
+      return [];
+    }
+  },
+
+  fetchCuentasByEstado: async (idEstado) => {
+    set({ loading: true, error: null, filtroEstado: idEstado });
+    try {
+      const response = await api.get(`/finanzas/cuentas/estado/${idEstado}`);
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ cuentas: data, loading: false });
+    } catch (error) {
+      console.error('[fetchCuentasByEstado] Error:', error);
+      set({ error: error.message, loading: false, cuentas: [] });
     }
   },
 
@@ -52,10 +79,15 @@ export const useFinanceStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/finanzas/cuentas/${id}`);
-      set((state) => ({
-        cuentas: state.cuentas.filter((c) => c.id_cuenta !== id),
-        loading: false,
-      }));
+      
+      const filtroEstado = get().filtroEstado;
+      
+      // Recargar según el filtro actual
+      if (filtroEstado) {
+        await get().fetchCuentasByEstado(filtroEstado);
+      } else {
+        await get().fetchCuentas();
+      }
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });

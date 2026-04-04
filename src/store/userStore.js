@@ -1,18 +1,45 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export const useUserStore = create((set) => ({
+export const useUserStore = create((set, get) => ({
   usuarios: [],
   loading: false,
   error: null,
+  estados: [], // Estados desde la DB
+  filtroEstado: null, // Estado actualmente seleccionado
 
   fetchUsuarios: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/usuarios');
-      set({ usuarios: response.data, loading: false });
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ usuarios: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
+    }
+  },
+
+  fetchEstados: async () => {
+    try {
+      const response = await api.get('/usuarios/meta');
+      const estados = response.data.estados || [];
+      set({ estados });
+      return estados;
+    } catch (error) {
+      console.error('Error fetching estados:', error);
+      return [];
+    }
+  },
+
+  fetchUsuariosByEstado: async (idEstado) => {
+    set({ loading: true, error: null, filtroEstado: idEstado });
+    try {
+      const response = await api.get(`/usuarios/estado/${idEstado}`);
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ usuarios: data, loading: false });
+    } catch (error) {
+      console.error('[fetchUsuariosByEstado] Error:', error);
+      set({ error: error.message, loading: false, usuarios: [] });
     }
   },
 
@@ -50,10 +77,15 @@ export const useUserStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/usuarios/${id}`);
-      set((state) => ({
-        usuarios: state.usuarios.filter((u) => u.id_usuario !== id),
-        loading: false,
-      }));
+      
+      const filtroEstado = get().filtroEstado;
+      
+      // Recargar según el filtro actual
+      if (filtroEstado) {
+        await get().fetchUsuariosByEstado(filtroEstado);
+      } else {
+        await get().fetchUsuarios();
+      }
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });

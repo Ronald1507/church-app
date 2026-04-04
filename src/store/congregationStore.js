@@ -1,18 +1,45 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export const useCongregationStore = create((set) => ({
+export const useCongregationStore = create((set, get) => ({
   congregaciones: [],
   loading: false,
   error: null,
+  estados: [], // Estados desde la DB
+  filtroEstado: null, // Estado actualmente seleccionado
 
   fetchCongregaciones: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/congregaciones');
-      set({ congregaciones: response.data, loading: false });
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ congregaciones: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
+    }
+  },
+
+  fetchEstados: async () => {
+    try {
+      const response = await api.get('/congregaciones/meta');
+      const estados = response.data.estados || [];
+      set({ estados });
+      return estados;
+    } catch (error) {
+      console.error('Error fetching estados:', error);
+      return [];
+    }
+  },
+
+  fetchCongregacionesByEstado: async (idEstado) => {
+    set({ loading: true, error: null, filtroEstado: idEstado });
+    try {
+      const response = await api.get(`/congregaciones/estado/${idEstado}`);
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ congregaciones: data, loading: false });
+    } catch (error) {
+      console.error('[fetchCongregacionesByEstado] Error:', error);
+      set({ error: error.message, loading: false, congregaciones: [] });
     }
   },
 
@@ -50,10 +77,15 @@ export const useCongregationStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/congregaciones/${id}`);
-      set((state) => ({
-        congregaciones: state.congregaciones.filter((c) => c.id_congregacion !== id),
-        loading: false,
-      }));
+      
+      const filtroEstado = get().filtroEstado;
+      
+      // Recargar según el filtro actual
+      if (filtroEstado) {
+        await get().fetchCongregacionesByEstado(filtroEstado);
+      } else {
+        await get().fetchCongregaciones();
+      }
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });

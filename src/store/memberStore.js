@@ -5,36 +5,71 @@ export const useMemberStore = create((set, get) => ({
   members: [],
   loading: false,
   error: null,
-  mostrarInactivos: false,
+  estados: [], // Estados de miembros desde la DB
+  filtroEstado: null, // Estado actualmente seleccionado
 
   fetchMembers: async () => {
-    console.log('[fetchMembers] Starting...');
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, filtroEstado: null });
     try {
-      console.log('[fetchMembers] Calling /miembros');
       const response = await api.get('/miembros');
-      console.log('[fetchMembers] Response:', response.data);
       const data = Array.isArray(response.data) ? response.data : [];
       set({ members: data, loading: false });
-      console.log('[fetchMembers] Members loaded:', data.length);
     } catch (error) {
-      console.error('[fetchMembers] Error:', error);
       set({ error: error.message, loading: false, members: [] });
     }
   },
 
-  fetchAllMembers: async () => {
-    console.log('[fetchAllMembers] Starting...');
-    set({ loading: true, error: null });
+  fetchEstados: async () => {
     try {
-      console.log('[fetchAllMembers] Calling /miembros/todos');
-      const response = await api.get('/miembros/todos');
-      console.log('[fetchAllMembers] Response:', response.data);
+      const response = await api.get('/miembros/opciones');
+      const estados = response.data.estados || [];
+      set({ estados });
+      return estados;
+    } catch (error) {
+      console.error('Error fetching estados:', error);
+      return [];
+    }
+  },
+
+  fetchMembersByEstado: async (idEstado) => {
+    set({ loading: true, error: null, filtroEstado: idEstado });
+    try {
+      const response = await api.get(`/miembros/estado/${idEstado}`);
       const data = Array.isArray(response.data) ? response.data : [];
       set({ members: data, loading: false });
-      console.log('[fetchAllMembers] Members loaded:', data.length);
     } catch (error) {
-      console.error('[fetchAllMembers] Error:', error);
+      console.error('[fetchMembersByEstado] Error:', error);
+      set({ error: error.message, loading: false, members: [] });
+    }
+  },
+
+  fetchInactivos: async () => {
+    set({ loading: true, error: null });
+    try {
+      console.log('[fetchInactivos] Calling /miembros/todos');
+      const response = await api.get('/miembros/todos');
+      console.log('[fetchInactivos] Response:', response.data);
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ members: data, loading: false });
+    } catch (error) {
+      console.error('[fetchInactivos] Error:', error);
+      console.error('[fetchInactivos] Error response:', error.response?.data);
+      set({ error: error.message, loading: false, members: [] });
+    }
+  },
+
+  fetchEliminados: async () => {
+    set({ loading: true, error: null });
+    try {
+      console.log('[fetchEliminados] Calling /miembros/eliminados');
+      const response = await api.get('/miembros/eliminados');
+      console.log('[fetchEliminados] Response status:', response.status);
+      console.log('[fetchEliminados] Response data:', response.data);
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ members: data, loading: false });
+    } catch (error) {
+      console.error('[fetchEliminados] Error:', error);
+      console.error('[fetchEliminados] Error response:', error.response?.data);
       set({ error: error.message, loading: false, members: [] });
     }
   },
@@ -43,72 +78,43 @@ export const useMemberStore = create((set, get) => ({
     const currentMostrarInactivos = get().mostrarInactivos;
     const newValue = !currentMostrarInactivos;
     
-    console.log('[toggleMostrarInactivos] Current:', currentMostrarInactivos, '-> new:', newValue);
+    set({ mostrarInactivos: newValue, mostrarEliminados: false });
     
-    set({ mostrarInactivos: newValue });
-    
-    // Llamar a la API directamente según el estado
     if (newValue) {
-      console.log('[toggleMostrarInactivos] Fetching inactive members...');
-      set({ loading: true, error: null });
-      try {
-        console.log('[toggleMostrarInactivos] Calling /miembros/todos');
-        const response = await api.get('/miembros/todos');
-        console.log('[toggleMostrarInactivos] Response status:', response.status);
-        console.log('[toggleMostrarInactivos] Response data:', response.data);
-        const data = Array.isArray(response.data) ? response.data : [];
-        set({ members: data, loading: false });
-        console.log('[toggleMostrarInactivos] Loaded:', data.length, 'inactive members');
-      } catch (error) {
-        console.error('[toggleMostrarInactivos] Error:', error);
-        console.error('[toggleMostrarInactivos] Error response:', error.response);
-        set({ error: error.message, loading: false, members: [] });
-      }
+      await get().fetchInactivos();
     } else {
-      console.log('[toggleMostrarInactivos] Fetching active members...');
-      set({ loading: true, error: null });
-      try {
-        console.log('[toggleMostrarInactivos] Calling /miembros');
-        const response = await api.get('/miembros');
-        console.log('[toggleMostrarInactivos] Response status:', response.status);
-        console.log('[toggleMostrarInactivos] Response data:', response.data);
-        const data = Array.isArray(response.data) ? response.data : [];
-        set({ members: data, loading: false });
-        console.log('[toggleMostrarInactivos] Loaded:', data.length, 'active members');
-      } catch (error) {
-        console.error('[toggleMostrarInactivos] Error:', error);
-        console.error('[toggleMostrarInactivos] Error response:', error.response);
-        set({ error: error.message, loading: false, members: [] });
-      }
+      await get().fetchMembers();
+    }
+  },
+
+  toggleMostrarEliminados: async () => {
+    const currentMostrarEliminados = get().mostrarEliminados;
+    const newValue = !currentMostrarEliminados;
+    
+    set({ mostrarEliminados: newValue, mostrarInactivos: false });
+    
+    if (newValue) {
+      await get().fetchEliminados();
+    } else {
+      await get().fetchMembers();
     }
   },
 
   toggleMemberStatus: async (id) => {
-    console.log('[toggleMemberStatus] Called with id:', id);
     set({ loading: true, error: null });
     try {
-      console.log('[toggleMemberStatus] Calling API...');
-      const response = await api.patch(`/miembros/${id}/status`);
-      console.log('[toggleMemberStatus] API response:', response.data);
+      await api.patch(`/miembros/${id}/status`);
+      
+      const filtroEstado = get().filtroEstado;
       
       // Recargar según el filtro actual
-      const mostrarInactivos = get().mostrarInactivos;
-      console.log('[toggleMemberStatus] mostrarInactivos:', mostrarInactivos);
-      
-      if (mostrarInactivos) {
-        console.log('[toggleMemberStatus] Reloading inactive members...');
-        const response = await api.get('/miembros/todos');
-        const data = Array.isArray(response.data) ? response.data : [];
-        set({ members: data, loading: false });
+      if (filtroEstado) {
+        await get().fetchMembersByEstado(filtroEstado);
       } else {
-        console.log('[toggleMemberStatus] Reloading active members...');
-        const response = await api.get('/miembros');
-        const data = Array.isArray(response.data) ? response.data : [];
-        set({ members: data, loading: false });
+        await get().fetchMembers();
       }
       return { success: true };
     } catch (error) {
-      console.error('[toggleMemberStatus] Error:', error);
       set({ error: error.message, loading: false });
       return { success: false, message: error.response?.data?.error };
     }
@@ -148,10 +154,15 @@ export const useMemberStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/miembros/${id}`);
-      set((state) => ({
-        members: state.members.filter((m) => m.id_miembro !== id),
-        loading: false,
-      }));
+      
+      const filtroEstado = get().filtroEstado;
+      
+      // Recargar según el filtro actual
+      if (filtroEstado) {
+        await get().fetchMembersByEstado(filtroEstado);
+      } else {
+        await get().fetchMembers();
+      }
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });

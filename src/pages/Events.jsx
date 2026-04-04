@@ -4,7 +4,7 @@ import { useEventStore } from '../store/eventStore';
 import api from '../services/api';
 
 export default function Events() {
-  const { eventos, loading, fetchEventos, createEvento, updateEvento, deleteEvento } = useEventStore();
+  const { eventos, loading, fetchEventos, createEvento, updateEvento, deleteEvento, fetchEstados, fetchEventosByEstado, estados, filtroEstado } = useEventStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [] });
@@ -14,6 +14,7 @@ export default function Events() {
   useEffect(() => {
     fetchEventos();
     fetchMeta();
+    fetchEstados();
   }, []);
 
   const fetchMeta = async () => {
@@ -22,6 +23,15 @@ export default function Events() {
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);
+    }
+  };
+
+  const handleFiltrarPorEstado = async (idEstado) => {
+    if (filtroEstado === idEstado) {
+      // Si ya está seleccionado, volver a todos
+      await fetchEventos();
+    } else {
+      await fetchEventosByEstado(idEstado);
     }
   };
 
@@ -88,10 +98,46 @@ export default function Events() {
         </button>
       </div>
 
+      {/* Filtro dinámico por estado */}
+      {estados.length > 0 && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => fetchEventos()}
+              className={`px-3 py-1.5 rounded text-sm ${
+                filtroEstado === null
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Todos
+            </button>
+            {estados.map((estado) => (
+              <button
+                key={estado.id_estado}
+                onClick={() => handleFiltrarPorEstado(estado.id_estado)}
+                className={`px-3 py-1.5 rounded text-sm ${
+                  filtroEstado === estado.id_estado
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {estado.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-center py-8">Cargando...</p>
       ) : eventos.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No hay eventos registrados</p>
+        <p className="text-gray-500 text-center py-8">
+          {filtroEstado 
+            ? `No hay eventos con el estado seleccionado` 
+            : 'No hay eventos registrados'}
+        </p>
       ) : (
         <div className="space-y-4">
           {eventos.map((event) => (

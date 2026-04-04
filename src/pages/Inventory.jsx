@@ -4,7 +4,7 @@ import { useInventoryStore } from '../store/inventoryStore';
 import api from '../services/api';
 
 export default function Inventory() {
-  const { items, loading, fetchItems, createItem, updateItem, deleteItem } = useInventoryStore();
+  const { items, loading, fetchItems, createItem, updateItem, deleteItem, fetchEstados, fetchItemsByEstado, estados, filtroEstado } = useInventoryStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [] });
@@ -14,6 +14,7 @@ export default function Inventory() {
   useEffect(() => {
     fetchItems();
     fetchMeta();
+    fetchEstados();
   }, []);
 
   const fetchMeta = async () => {
@@ -22,6 +23,15 @@ export default function Inventory() {
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);
+    }
+  };
+
+  const handleFiltrarPorEstado = async (idEstado) => {
+    if (filtroEstado === idEstado) {
+      // Si ya está seleccionado, volver a todos
+      await fetchItems();
+    } else {
+      await fetchItemsByEstado(idEstado);
     }
   };
 
@@ -89,10 +99,46 @@ export default function Inventory() {
         </button>
       </div>
 
+      {/* Filtro dinámico por estado */}
+      {estados.length > 0 && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => fetchItems()}
+              className={`px-3 py-1.5 rounded text-sm ${
+                filtroEstado === null
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Todos
+            </button>
+            {estados.map((estado) => (
+              <button
+                key={estado.id_estado}
+                onClick={() => handleFiltrarPorEstado(estado.id_estado)}
+                className={`px-3 py-1.5 rounded text-sm ${
+                  filtroEstado === estado.id_estado
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {estado.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-center py-8">Cargando...</p>
       ) : items.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No hay items en el inventario</p>
+        <p className="text-gray-500 text-center py-8">
+          {filtroEstado 
+            ? `No hay items con el estado seleccionado` 
+            : 'No hay items en el inventario'}
+        </p>
       ) : (
         <div className="space-y-4">
           {items.map((item) => (

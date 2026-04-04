@@ -4,7 +4,7 @@ import { useMemberStore } from '../store/memberStore';
 import api from '../services/api';
 
 export default function Members() {
-  const { members, loading, fetchMembers, createMember, updateMember, deleteMember, toggleMostrarInactivos, toggleMemberStatus, mostrarInactivos } = useMemberStore();
+  const { members, loading, fetchMembers, createMember, updateMember, deleteMember, fetchEstados, fetchMembersByEstado, estados, filtroEstado } = useMemberStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [], instituciones: [] });
@@ -14,6 +14,7 @@ export default function Members() {
   useEffect(() => {
     fetchMembers();
     fetchMeta();
+    fetchEstados();
   }, []);
 
   const fetchMeta = async () => {
@@ -22,6 +23,15 @@ export default function Members() {
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);
+    }
+  };
+
+  const handleFiltrarPorEstado = async (idEstado) => {
+    if (filtroEstado === idEstado) {
+      // Si ya está seleccionado, volver a todos
+      await fetchMembers();
+    } else {
+      await fetchMembersByEstado(idEstado);
     }
   };
 
@@ -85,30 +95,54 @@ export default function Members() {
     <div className="p-4 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-xl md:text-2xl font-bold">Miembros</h1>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button
-            onClick={toggleMostrarInactivos}
-            className={`px-4 py-2 rounded w-full sm:w-auto ${
-              mostrarInactivos 
-                ? 'bg-gray-600 text-white hover:bg-gray-700' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {mostrarInactivos ? 'Ver solo activos' : 'Ver inactivos'}
-          </button>
-          <button
-            onClick={openCreateModal}
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
-          >
-            Agregar Miembro
-          </button>
-        </div>
+        <button
+          onClick={openCreateModal}
+          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
+        >
+          Agregar Miembro
+        </button>
       </div>
+
+      {/* Filtro dinámico por estado */}
+      {estados.length > 0 && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => fetchMembers()}
+              className={`px-3 py-1.5 rounded text-sm ${
+                filtroEstado === null
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Todos
+            </button>
+            {estados.map((estado) => (
+              <button
+                key={estado.id_estado}
+                onClick={() => handleFiltrarPorEstado(estado.id_estado)}
+                className={`px-3 py-1.5 rounded text-sm ${
+                  filtroEstado === estado.id_estado
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {estado.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-center py-8">Cargando...</p>
       ) : members.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No hay miembros registrados</p>
+        <p className="text-gray-500 text-center py-8">
+          {filtroEstado 
+            ? `No hay miembros con el estado seleccionado` 
+            : 'No hay miembros registrados'}
+        </p>
       ) : (
         <div className="space-y-4">
           {members.map((member) => (
@@ -152,7 +186,7 @@ export default function Members() {
                     >
                       Activar
                     </button>
-                  ) : (
+                  ) : member.id_estado !== 21 && (
                     <button
                       onClick={async () => {
                         if (confirm('¿Inactivar este miembro?')) {
@@ -162,6 +196,18 @@ export default function Members() {
                       className="text-orange-600 hover:text-orange-900 text-sm"
                     >
                       Inactivar
+                    </button>
+                  )}
+                  {member.id_estado !== 21 && (
+                    <button
+                      onClick={async () => {
+                        if (confirm('¿Estás seguro de ELIMINAR este miembro? Esta acción no se puede deshacer.')) {
+                          await deleteMember(member.id_miembro);
+                        }
+                      }}
+                      className="text-red-600 hover:text-red-900 text-sm"
+                    >
+                      Eliminar
                     </button>
                   )}
                 </div>

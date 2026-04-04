@@ -1,18 +1,45 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export const useEventStore = create((set) => ({
+export const useEventStore = create((set, get) => ({
   eventos: [],
   loading: false,
   error: null,
+  estados: [], // Estados desde la DB
+  filtroEstado: null, // Estado actualmente seleccionado
 
   fetchEventos: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/eventos');
-      set({ eventos: response.data, loading: false });
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ eventos: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
+    }
+  },
+
+  fetchEstados: async () => {
+    try {
+      const response = await api.get('/eventos/meta');
+      const estados = response.data.estados || [];
+      set({ estados });
+      return estados;
+    } catch (error) {
+      console.error('Error fetching estados:', error);
+      return [];
+    }
+  },
+
+  fetchEventosByEstado: async (idEstado) => {
+    set({ loading: true, error: null, filtroEstado: idEstado });
+    try {
+      const response = await api.get(`/eventos/estado/${idEstado}`);
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ eventos: data, loading: false });
+    } catch (error) {
+      console.error('[fetchEventosByEstado] Error:', error);
+      set({ error: error.message, loading: false, eventos: [] });
     }
   },
 
@@ -50,10 +77,15 @@ export const useEventStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/eventos/${id}`);
-      set((state) => ({
-        eventos: state.eventos.filter((e) => e.id_evento !== id),
-        loading: false,
-      }));
+      
+      const filtroEstado = get().filtroEstado;
+      
+      // Recargar según el filtro actual
+      if (filtroEstado) {
+        await get().fetchEventosByEstado(filtroEstado);
+      } else {
+        await get().fetchEventos();
+      }
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });

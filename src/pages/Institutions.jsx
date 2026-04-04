@@ -4,7 +4,7 @@ import { useInstitutionStore } from '../store/institutionStore';
 import api from '../services/api';
 
 export default function Institutions() {
-  const { instituciones, loading, fetchInstituciones, createInstitucion, updateInstitucion, deleteInstitucion } = useInstitutionStore();
+  const { instituciones, loading, fetchInstituciones, createInstitucion, updateInstitucion, deleteInstitucion, fetchEstados, fetchInstitucionesByEstado, estados, filtroEstado } = useInstitutionStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [] });
@@ -14,6 +14,7 @@ export default function Institutions() {
   useEffect(() => {
     fetchInstituciones();
     fetchMeta();
+    fetchEstados();
   }, []);
 
   const fetchMeta = async () => {
@@ -22,6 +23,15 @@ export default function Institutions() {
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);
+    }
+  };
+
+  const handleFiltrarPorEstado = async (idEstado) => {
+    if (filtroEstado === idEstado) {
+      // Si ya está seleccionado, volver a todos
+      await fetchInstituciones();
+    } else {
+      await fetchInstitucionesByEstado(idEstado);
     }
   };
 
@@ -82,10 +92,46 @@ export default function Institutions() {
         </button>
       </div>
 
+      {/* Filtro dinámico por estado */}
+      {estados.length > 0 && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => fetchInstituciones()}
+              className={`px-3 py-1.5 rounded text-sm ${
+                filtroEstado === null
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Todos
+            </button>
+            {estados.map((estado) => (
+              <button
+                key={estado.id_estado}
+                onClick={() => handleFiltrarPorEstado(estado.id_estado)}
+                className={`px-3 py-1.5 rounded text-sm ${
+                  filtroEstado === estado.id_estado
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {estado.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-center py-8">Cargando...</p>
       ) : instituciones.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No hay instituciones registradas</p>
+        <p className="text-gray-500 text-center py-8">
+          {filtroEstado 
+            ? `No hay instituciones con el estado seleccionado` 
+            : 'No hay instituciones registradas'}
+        </p>
       ) : (
         <div className="space-y-4">
           {instituciones.map((inst) => (

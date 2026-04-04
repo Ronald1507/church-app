@@ -4,7 +4,7 @@ import { useUserStore } from '../store/userStore';
 import api from '../services/api';
 
 export default function Users() {
-  const { usuarios, loading, fetchUsuarios, createUsuario, updateUsuario, deleteUsuario } = useUserStore();
+  const { usuarios, loading, fetchUsuarios, createUsuario, updateUsuario, deleteUsuario, fetchEstados, fetchUsuariosByEstado, estados, filtroEstado } = useUserStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [meta, setMeta] = useState({ roles: [], estados: [], miembros: [] });
@@ -14,6 +14,7 @@ export default function Users() {
   useEffect(() => {
     fetchUsuarios();
     fetchMeta();
+    fetchEstados();
   }, []);
 
   const fetchMeta = async () => {
@@ -22,6 +23,15 @@ export default function Users() {
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);
+    }
+  };
+
+  const handleFiltrarPorEstado = async (idEstado) => {
+    if (filtroEstado === idEstado) {
+      // Si ya está seleccionado, volver a todos
+      await fetchUsuarios();
+    } else {
+      await fetchUsuariosByEstado(idEstado);
     }
   };
 
@@ -87,10 +97,46 @@ export default function Users() {
         </button>
       </div>
 
+      {/* Filtro dinámico por estado */}
+      {estados.length > 0 && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => fetchUsuarios()}
+              className={`px-3 py-1.5 rounded text-sm ${
+                filtroEstado === null
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Todos
+            </button>
+            {estados.map((estado) => (
+              <button
+                key={estado.id_estado}
+                onClick={() => handleFiltrarPorEstado(estado.id_estado)}
+                className={`px-3 py-1.5 rounded text-sm ${
+                  filtroEstado === estado.id_estado
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {estado.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-center py-8">Cargando...</p>
       ) : usuarios.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No hay usuarios registrados</p>
+        <p className="text-gray-500 text-center py-8">
+          {filtroEstado 
+            ? `No hay usuarios con el estado seleccionado` 
+            : 'No hay usuarios registrados'}
+        </p>
       ) : (
         <div className="space-y-4">
           {usuarios.map((user) => (

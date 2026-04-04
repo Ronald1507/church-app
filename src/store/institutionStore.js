@@ -1,18 +1,45 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export const useInstitutionStore = create((set) => ({
+export const useInstitutionStore = create((set, get) => ({
   instituciones: [],
   loading: false,
   error: null,
+  estados: [], // Estados desde la DB
+  filtroEstado: null, // Estado actualmente seleccionado
 
   fetchInstituciones: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/instituciones');
-      set({ instituciones: response.data, loading: false });
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ instituciones: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
+    }
+  },
+
+  fetchEstados: async () => {
+    try {
+      const response = await api.get('/instituciones/meta');
+      const estados = response.data.estados || [];
+      set({ estados });
+      return estados;
+    } catch (error) {
+      console.error('Error fetching estados:', error);
+      return [];
+    }
+  },
+
+  fetchInstitucionesByEstado: async (idEstado) => {
+    set({ loading: true, error: null, filtroEstado: idEstado });
+    try {
+      const response = await api.get(`/instituciones/estado/${idEstado}`);
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ instituciones: data, loading: false });
+    } catch (error) {
+      console.error('[fetchInstitucionesByEstado] Error:', error);
+      set({ error: error.message, loading: false, instituciones: [] });
     }
   },
 
@@ -50,10 +77,15 @@ export const useInstitutionStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/instituciones/${id}`);
-      set((state) => ({
-        instituciones: state.instituciones.filter((i) => i.id_institucion !== id),
-        loading: false,
-      }));
+      
+      const filtroEstado = get().filtroEstado;
+      
+      // Recargar según el filtro actual
+      if (filtroEstado) {
+        await get().fetchInstitucionesByEstado(filtroEstado);
+      } else {
+        await get().fetchInstituciones();
+      }
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });

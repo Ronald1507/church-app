@@ -4,7 +4,7 @@ import { useFinanceStore } from '../store/financeStore';
 import api from '../services/api';
 
 export default function Finances() {
-  const { cuentas, transacciones, loading, fetchCuentas, fetchTransacciones, createCuenta, createTransaccion, deleteTransaccion, deleteCuenta } = useFinanceStore();
+  const { cuentas, transacciones, loading, fetchCuentas, fetchTransacciones, createCuenta, createTransaccion, deleteTransaccion, deleteCuenta, fetchEstados, fetchCuentasByEstado, estados, filtroEstado } = useFinanceStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('cuenta'); // 'cuenta' o 'transaccion'
   const [meta, setMeta] = useState({ estados: [], congregaciones: [] });
@@ -15,6 +15,7 @@ export default function Finances() {
     fetchCuentas();
     fetchTransacciones();
     fetchMeta();
+    fetchEstados();
   }, []);
 
   const fetchMeta = async () => {
@@ -23,6 +24,15 @@ export default function Finances() {
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);
+    }
+  };
+
+  const handleFiltrarPorEstado = async (idEstado) => {
+    if (filtroEstado === idEstado) {
+      // Si ya está seleccionado, volver a todos
+      await fetchCuentas();
+    } else {
+      await fetchCuentasByEstado(idEstado);
     }
   };
 
@@ -129,10 +139,47 @@ export default function Finances() {
       {/* Cuentas */}
       <div className="mb-8">
         <h2 className="text-lg md:text-xl font-bold mb-4">Cuentas</h2>
+        
+        {/* Filtro dinámico por estado */}
+        {estados.length > 0 && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => fetchCuentas()}
+                className={`px-3 py-1.5 rounded text-sm ${
+                  filtroEstado === null
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Todos
+              </button>
+              {estados.map((estado) => (
+                <button
+                  key={estado.id_estado}
+                  onClick={() => handleFiltrarPorEstado(estado.id_estado)}
+                  className={`px-3 py-1.5 rounded text-sm ${
+                    filtroEstado === estado.id_estado
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {estado.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <p className="text-center py-4">Cargando...</p>
         ) : cuentas.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No hay cuentas registradas</p>
+          <p className="text-gray-500 text-center py-4">
+            {filtroEstado 
+              ? `No hay cuentas con el estado seleccionado` 
+              : 'No hay cuentas registradas'}
+          </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {cuentas.map((cuenta) => (

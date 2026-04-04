@@ -1,18 +1,45 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export const useMinistryStore = create((set) => ({
+export const useMinistryStore = create((set, get) => ({
   ministerios: [],
   loading: false,
   error: null,
+  estados: [], // Estados desde la DB
+  filtroEstado: null, // Estado actualmente seleccionado
 
   fetchMinisterios: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/ministerios');
-      set({ ministerios: response.data, loading: false });
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ ministerios: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
+    }
+  },
+
+  fetchEstados: async () => {
+    try {
+      const response = await api.get('/ministerios/meta');
+      const estados = response.data.estados || [];
+      set({ estados });
+      return estados;
+    } catch (error) {
+      console.error('Error fetching estados:', error);
+      return [];
+    }
+  },
+
+  fetchMinisteriosByEstado: async (idEstado) => {
+    set({ loading: true, error: null, filtroEstado: idEstado });
+    try {
+      const response = await api.get(`/ministerios/estado/${idEstado}`);
+      const data = Array.isArray(response.data) ? response.data : [];
+      set({ ministerios: data, loading: false });
+    } catch (error) {
+      console.error('[fetchMinisteriosByEstado] Error:', error);
+      set({ error: error.message, loading: false, ministerios: [] });
     }
   },
 
@@ -50,10 +77,15 @@ export const useMinistryStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/ministerios/${id}`);
-      set((state) => ({
-        ministerios: state.ministerios.filter((m) => m.id_ministerio !== id),
-        loading: false,
-      }));
+      
+      const filtroEstado = get().filtroEstado;
+      
+      // Recargar según el filtro actual
+      if (filtroEstado) {
+        await get().fetchMinisteriosByEstado(filtroEstado);
+      } else {
+        await get().fetchMinisterios();
+      }
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
