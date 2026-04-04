@@ -19,7 +19,7 @@ export default function Ministries() {
 
   const fetchMeta = async () => {
     try {
-      const response = await api.get('/ministerios/meta');
+      const response = await api.get('/ministerios/opciones');
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);

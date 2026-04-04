@@ -19,7 +19,7 @@ export default function Users() {
 
   const fetchMeta = async () => {
     try {
-      const response = await api.get('/usuarios/meta');
+      const response = await api.get('/usuarios/opciones');
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);

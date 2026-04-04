@@ -21,7 +21,7 @@ export const useInstitutionStore = create((set, get) => ({
 
   fetchEstados: async () => {
     try {
-      const response = await api.get('/instituciones/meta');
+      const response = await api.get('/instituciones/opciones');
       const estados = response.data.estados || [];
       set({ estados });
       return estados;

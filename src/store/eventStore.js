@@ -21,7 +21,7 @@ export const useEventStore = create((set, get) => ({
 
   fetchEstados: async () => {
     try {
-      const response = await api.get('/eventos/meta');
+      const response = await api.get('/eventos/opciones');
       const estados = response.data.estados || [];
       set({ estados });
       return estados;

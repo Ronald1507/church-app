@@ -21,7 +21,7 @@ export const useCongregationStore = create((set, get) => ({
 
   fetchEstados: async () => {
     try {
-      const response = await api.get('/congregaciones/meta');
+      const response = await api.get('/congregaciones/opciones');
       const estados = response.data.estados || [];
       set({ estados });
       return estados;

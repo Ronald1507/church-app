@@ -21,7 +21,7 @@ export const useUserStore = create((set, get) => ({
 
   fetchEstados: async () => {
     try {
-      const response = await api.get('/usuarios/meta');
+      const response = await api.get('/usuarios/opciones');
       const estados = response.data.estados || [];
       set({ estados });
       return estados;

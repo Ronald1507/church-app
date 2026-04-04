@@ -19,7 +19,7 @@ export default function Inventory() {
 
   const fetchMeta = async () => {
     try {
-      const response = await api.get('/inventario/meta');
+      const response = await api.get('/inventario/opciones');
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);

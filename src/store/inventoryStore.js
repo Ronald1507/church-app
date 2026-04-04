@@ -21,7 +21,7 @@ export const useInventoryStore = create((set, get) => ({
 
   fetchEstados: async () => {
     try {
-      const response = await api.get('/inventario/meta');
+      const response = await api.get('/inventario/opciones');
       const estados = response.data.estados || [];
       set({ estados });
       return estados;

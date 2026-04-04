@@ -23,7 +23,7 @@ export const useFinanceStore = create((set, get) => ({
 
   fetchEstados: async () => {
     try {
-      const response = await api.get('/finanzas/meta');
+      const response = await api.get('/finanzas/opciones');
       const estados = response.data.estados || [];
       set({ estados });
       return estados;

@@ -19,7 +19,7 @@ export default function Events() {
 
   const fetchMeta = async () => {
     try {
-      const response = await api.get('/eventos/meta');
+      const response = await api.get('/eventos/opciones');
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);

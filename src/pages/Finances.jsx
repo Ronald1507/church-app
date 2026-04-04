@@ -20,7 +20,7 @@ export default function Finances() {
 
   const fetchMeta = async () => {
     try {
-      const response = await api.get('/finanzas/meta');
+      const response = await api.get('/finanzas/opciones');
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);

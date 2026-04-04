@@ -21,7 +21,7 @@ export const useMinistryStore = create((set, get) => ({
 
   fetchEstados: async () => {
     try {
-      const response = await api.get('/ministerios/meta');
+      const response = await api.get('/ministerios/opciones');
       const estados = response.data.estados || [];
       set({ estados });
       return estados;

@@ -19,7 +19,7 @@ export default function Institutions() {
 
   const fetchMeta = async () => {
     try {
-      const response = await api.get('/instituciones/meta');
+      const response = await api.get('/instituciones/opciones');
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);

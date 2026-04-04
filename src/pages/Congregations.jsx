@@ -19,7 +19,7 @@ export default function Congregations() {
 
   const fetchMeta = async () => {
     try {
-      const response = await api.get('/congregaciones/meta');
+      const response = await api.get('/congregaciones/opciones');
       setMeta(response.data);
     } catch (error) {
       console.error('Error fetching meta:', error);
