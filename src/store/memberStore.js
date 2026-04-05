@@ -169,4 +169,17 @@ export const useMemberStore = create((set, get) => ({
       return { success: false, message: error.response?.data?.error };
     }
   },
+
+  // Obtener un miembro específico con todas sus relaciones
+  getMember: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get(`/miembros/${id}`);
+      set({ loading: false });
+      return { success: true, data: response.data };
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      return { success: false, message: error.response?.data?.error };
+    }
+  },
 }));

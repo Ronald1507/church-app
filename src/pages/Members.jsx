@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMemberStore } from '../store/memberStore';
 import { useOpciones } from '../hooks/useOpciones';
+import api from '../services/api';
 
 export default function Members() {
   const { 
@@ -15,11 +16,14 @@ export default function Members() {
     fetchMembersByEstado, 
     estados, 
     filtroEstado,
-    toggleMemberStatus
+    toggleMemberStatus,
+    getMember
   } = useMemberStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
+  const [viewingMember, setViewingMember] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [], instituciones: [] });
   
   // Lazy load opciones - solo cuando se necesitan
@@ -41,8 +45,11 @@ export default function Members() {
 
   // Editar - carga opciones bajo demanda
   const handleEdit = async (member) => {
-    const data = await loadOpciones();
-    setMeta(data);
+    // Cargar opciones si no están cargadas
+    if (!meta.estados?.length) {
+      const data = await loadOpciones();
+      setMeta(data);
+    }
     setEditingMember(member);
     setValue('nombres', member.nombres);
     setValue('apellidos', member.apellidos);
@@ -67,6 +74,17 @@ export default function Members() {
       await fetchMembers();
     } else {
       await fetchMembersByEstado(idEstado);
+    }
+  };
+
+  // Ver detalle del miembro - carga todas las relaciones
+  const handleViewMember = async (member) => {
+    try {
+      const response = await api.get(`/miembros/${member.id_miembro}`);
+      setViewingMember(response.data);
+      setIsDetailModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching member details:', error);
     }
   };
 
@@ -158,7 +176,11 @@ export default function Members() {
       ) : (
         <div className="space-y-4">
           {members.map((member) => (
-            <div key={member.id_miembro} className="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500">
+            <div 
+              key={member.id_miembro} 
+              className="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500 cursor-pointer hover:bg-gray-50"
+              onClick={() => handleViewMember(member)}
+            >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h3 className="font-bold text-lg">{member.nombres} {member.apellidos}</h3>
@@ -180,7 +202,7 @@ export default function Members() {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 ml-4">
+                <div className="flex flex-col gap-1 ml-4" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleEdit(member)}
                     className="text-indigo-600 hover:text-indigo-900 text-sm"
@@ -402,6 +424,199 @@ export default function Members() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalle del Miembro (Solo lectura con opción de editar) */}
+      {isDetailModalOpen && viewingMember && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-lg md:text-xl font-bold">
+                Detalle del Miembro
+              </h2>
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Información Principal */}
+            <div className="mb-6">
+              <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Información Personal</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="font-medium">Nombres:</span> {viewingMember.nombres}</div>
+                <div><span className="font-medium">Apellidos:</span> {viewingMember.apellidos}</div>
+                <div><span className="font-medium">RUT:</span> {viewingMember.rut || '-'}</div>
+                <div><span className="font-medium">Fecha de Nacimiento:</span> {viewingMember.fecha_nacimiento ? new Date(viewingMember.fecha_nacimiento).toLocaleDateString('es-CL') : '-'}</div>
+                <div><span className="font-medium">Género:</span> {viewingMember.genero === 'M' ? 'Masculino' : viewingMember.genero === 'F' ? 'Femenino' : '-'}</div>
+                <div><span className="font-medium">Estado Civil:</span> {viewingMember.estado_civil || '-'}</div>
+                <div><span className="font-medium">Email:</span> {viewingMember.email || '-'}</div>
+                <div><span className="font-medium">Teléfono:</span> {viewingMember.telefono || '-'}</div>
+                <div className="col-span-2"><span className="font-medium">Dirección:</span> {viewingMember.direccion || '-'}</div>
+                <div><span className="font-medium">Fecha de Ingreso:</span> {viewingMember.fecha_ingreso ? new Date(viewingMember.fecha_ingreso).toLocaleDateString('es-CL') : '-'}</div>
+              </div>
+            </div>
+
+            {/* Información de Membresía */}
+            <div className="mb-6">
+              <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Membresía</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="font-medium">Tipo:</span> {viewingMember.tipoMiembro?.nombre || '-'}</div>
+                <div><span className="font-medium">Estado:</span> <span className={`px-2 py-0.5 rounded text-xs ${viewingMember.estado?.codigo === 'ACTIVO' ? 'bg-green-100 text-green-800' : viewingMember.estado?.codigo === 'INACTIVO' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>{viewingMember.estado?.nombre || '-'}</span></div>
+                <div className="col-span-2"><span className="font-medium">Congregación:</span> {viewingMember.congregacion?.nombre || '-'}</div>
+              </div>
+            </div>
+
+            {/* Instituciones */}
+            {viewingMember.miembroInstitucions && viewingMember.miembroInstitucions.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Instituciones</h3>
+                <div className="space-y-2">
+                  {viewingMember.miembroInstitucions.map((mi) => (
+                    <div key={mi.id} className="bg-gray-50 p-2 rounded text-sm">
+                      <span className="font-medium">{mi.institucion?.nombre}</span>
+                      <span className="text-gray-500"> - {mi.rol || 'Miembro'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Relaciones Familiares */}
+            {(viewingMember.relacionesOrigen?.length > 0 || viewingMember.relacionesDestino?.length > 0) && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Familia</h3>
+                <div className="space-y-2 text-sm">
+                  {viewingMember.relacionesOrigen?.map((rel) => (
+                    <div key={rel.id} className="bg-gray-50 p-2 rounded">
+                      <span className="font-medium">{rel.miembroDestino?.nombres} {rel.miembroDestino?.apellidos}</span>
+                      <span className="text-gray-500"> - {rel.tipoRelacion?.nombre}</span>
+                    </div>
+                  ))}
+                  {viewingMember.relacionesDestino?.map((rel) => (
+                    <div key={rel.id} className="bg-gray-50 p-2 rounded">
+                      <span className="font-medium">{rel.miembroOrigen?.nombres} {rel.miembroOrigen?.apellidos}</span>
+                      <span className="text-gray-500"> - {rel.tipoRelacion?.nombre_inverso || rel.tipoRelacion?.nombre}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Historial Espiritual */}
+            {viewingMember.historialEspirituals && viewingMember.historialEspirituals.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Historial Espiritual</h3>
+                <div className="space-y-2">
+                  {viewingMember.historialEspirituals.map((he) => (
+                    <div key={he.id_hito} className="bg-gray-50 p-2 rounded text-sm">
+                      <span className="font-medium">{he.tipoHito?.nombre}</span>
+                      <span className="text-gray-500"> - {he.fecha_hito ? new Date(he.fecha_hito).toLocaleDateString('es-CL') : ''}</span>
+                      {he.lugar && <span className="text-gray-500"> - {he.lugar}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Visitas Pastorales */}
+            {viewingMember.visitaPastorals && viewingMember.visitaPastorals.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Visitas Pastorales</h3>
+                <div className="space-y-2">
+                  {viewingMember.visitaPastorals.slice(0, 5).map((vp) => (
+                    <div key={vp.id_visita} className="bg-gray-50 p-2 rounded text-sm">
+                      <span className="font-medium">{vp.motivo}</span>
+                      <span className="text-gray-500"> - {vp.fecha_visita ? new Date(vp.fecha_visita).toLocaleDateString('es-CL') : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pedidos de Oración */}
+            {viewingMember.peticionOraciones && viewingMember.peticionOraciones.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Pedidos de Oración</h3>
+                <div className="space-y-2">
+                  {viewingMember.peticionOraciones.slice(0, 5).map((po) => (
+                    <div key={po.id_peticion} className="bg-gray-50 p-2 rounded text-sm">
+                      <span className="font-medium">{po.descripcion.substring(0, 50)}...</span>
+                      <span className="text-gray-500"> - {po.categoria}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Asistencias a Eventos */}
+            {viewingMember.asistenciaEventos && viewingMember.asistenciaEventos.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Asistencia a Eventos</h3>
+                <div className="space-y-2">
+                  {viewingMember.asistenciaEventos.slice(0, 5).map((ae) => (
+                    <div key={ae.id} className="bg-gray-50 p-2 rounded text-sm">
+                      <span className="font-medium">{ae.evento?.nombre}</span>
+                      <span className="text-gray-500"> - {ae.evento?.fecha_inicio ? new Date(ae.evento.fecha_inicio).toLocaleDateString('es-CL') : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Documentos */}
+            {viewingMember.documentos && viewingMember.documentos.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Documentos</h3>
+                <div className="space-y-2">
+                  {viewingMember.documentos.map((doc) => (
+                    <div key={doc.id_documento} className="bg-gray-50 p-2 rounded text-sm">
+                      <span className="font-medium">{doc.tipo_documento}</span>
+                      <span className="text-gray-500"> - {doc.numero_serie || 'Sin número'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ofrendas y Dizmos */}
+            {viewingMember.ofrendaDizmos && viewingMember.ofrendaDizmos.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-gray-700 mb-2 border-b pb-1">Ofrendas y Dizmos</h3>
+                <div className="space-y-2">
+                  {viewingMember.ofrendaDizmos.slice(0, 5).map((od) => (
+                    <div key={od.id_ofrenda} className="bg-gray-50 p-2 rounded text-sm">
+                      <span className="font-medium">{od.tipo === 'dizmo' ? 'Dizmo' : 'Ofrenda'}</span>
+                      <span className="text-gray-500"> - ${od.monto}</span>
+                      <span className="text-gray-500"> - {od.fecha ? new Date(od.fecha).toLocaleDateString('es-CL') : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botones de acción */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
+              <button
+                onClick={() => {
+                  setIsDetailModalOpen(false);
+                  handleEdit(viewingMember);
+                }}
+                className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 rounded hover:bg-gray-400"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
