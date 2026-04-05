@@ -5,15 +5,15 @@ export const useUserStore = create((set, get) => ({
   usuarios: [],
   loading: false,
   error: null,
-  estados: [], // Estados desde la DB
-  filtroEstado: null, // Estado actualmente seleccionado
+  estados: [],
+  filtroEstado: null,
 
   fetchUsuarios: async () => {
     set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/usuarios');
-      const data = Array.isArray(response.data) ? response.data : [];
-      set({ usuarios: data, loading: false });
+      const data = response.data?.success ? response.data.data : [];
+      set({ usuarios: Array.isArray(data) ? data : [], loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
     }
@@ -22,7 +22,7 @@ export const useUserStore = create((set, get) => ({
   fetchEstados: async () => {
     try {
       const response = await api.get('/usuarios/opciones');
-      const estados = response.data.estados || [];
+      const estados = response.data?.success ? response.data.data?.estados || [] : [];
       set({ estados });
       return estados;
     } catch (error) {
@@ -35,8 +35,8 @@ export const useUserStore = create((set, get) => ({
     set({ loading: true, error: null, filtroEstado: idEstado });
     try {
       const response = await api.get(`/usuarios/estado/${idEstado}`);
-      const data = Array.isArray(response.data) ? response.data : [];
-      set({ usuarios: data, loading: false });
+      const data = response.data?.success ? response.data.data : [];
+      set({ usuarios: Array.isArray(data) ? data : [], loading: false });
     } catch (error) {
       console.error('[fetchUsuariosByEstado] Error:', error);
       set({ error: error.message, loading: false, usuarios: [] });
@@ -47,14 +47,15 @@ export const useUserStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.post('/usuarios', data);
-      set((state) => ({ 
-        usuarios: [...state.usuarios, response.data], 
-        loading: false 
-      }));
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje };
+      }
+      set((state) => ({ usuarios: [...state.usuarios, response.data.data], loading: false }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 
@@ -62,25 +63,30 @@ export const useUserStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.put(`/usuarios/${id}`, data);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje };
+      }
       set((state) => ({
-        usuarios: state.usuarios.map((u) => (u.id_usuario === id ? response.data : u)),
+        usuarios: state.usuarios.map((u) => (u.id_usuario === id ? response.data.data : u)),
         loading: false,
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 
   deleteUsuario: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/usuarios/${id}`);
-      
+      const response = await api.delete(`/usuarios/${id}`);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje };
+      }
       const filtroEstado = get().filtroEstado;
-      
-      // Recargar según el filtro actual
       if (filtroEstado) {
         await get().fetchUsuariosByEstado(filtroEstado);
       } else {
@@ -89,7 +95,7 @@ export const useUserStore = create((set, get) => ({
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 }));

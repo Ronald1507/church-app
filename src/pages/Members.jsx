@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useMemberStore } from '../store/memberStore';
 import { useOpciones } from '../hooks/useOpciones';
 import api from '../services/api';
+import { toast } from 'sonner';
 
 export default function Members() {
   const { 
@@ -89,9 +90,21 @@ export default function Members() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('¿Estás seguro de ELIMINAR este miembro? Esta acción no se puede deshacer.')) {
-      await deleteMember(id);
-    }
+    toast('¿Estás seguro de eliminar este miembro?', {
+      action: {
+        label: 'Eliminar',
+        onClick: async () => {
+          const result = await deleteMember(id);
+          if (result.success) {
+            toast.success('Miembro eliminado correctamente');
+          } else {
+            toast.error(result.message || 'Error al eliminar miembro');
+          }
+        },
+      },
+      description: 'Esta acción no se puede deshacer',
+      duration: 5000,
+    });
   };
 
   const onSubmit = async (data) => {
@@ -110,9 +123,12 @@ export default function Members() {
     }
     
     if (result.success) {
+      toast.success(editingMember ? 'Miembro actualizado correctamente' : 'Miembro creado correctamente');
       setIsModalOpen(false);
       setEditingMember(null);
       reset();
+    } else {
+      toast.error(result.message || 'Error al guardar miembro');
     }
   };
 
@@ -212,8 +228,11 @@ export default function Members() {
                   {member.estado?.codigo !== 'ACTIVO' && (
                     <button
                       onClick={async () => {
-                        if (confirm('¿Activar este miembro?')) {
-                          await toggleMemberStatus(member.id_miembro);
+                        const result = await toggleMemberStatus(member.id_miembro);
+                        if (result.success) {
+                          toast.success('Miembro activado correctamente');
+                        } else {
+                          toast.error(result.message || 'Error al activar miembro');
                         }
                       }}
                       className="text-green-600 hover:text-green-900 text-sm"
@@ -224,8 +243,11 @@ export default function Members() {
                   {member.estado?.codigo === 'ACTIVO' && (
                     <button
                       onClick={async () => {
-                        if (confirm('¿Inactivar este miembro?')) {
-                          await toggleMemberStatus(member.id_miembro);
+                        const result = await toggleMemberStatus(member.id_miembro);
+                        if (result.success) {
+                          toast.success('Miembro inactivado correctamente');
+                        } else {
+                          toast.error(result.message || 'Error al inactivar miembro');
                         }
                       }}
                       className="text-orange-600 hover:text-orange-900 text-sm"

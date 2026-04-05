@@ -23,10 +23,13 @@ export function useOpciones(endpoint, storeFetch) {
         storeFetch ? storeFetch() : Promise.resolve(null)
       ]);
 
+      // Nuevo formato ApiResponse: { success, mensaje, data }
+      const opcionesData = opcionesRes.data?.success ? opcionesRes.data.data : {};
+      
       const data = {
-        ...opcionesRes.data,
+        ...opcionesData,
         // Si el store ya tiene estados, usarlos; si no, tomarlos del endpoint
-        estados: opcionesRes.data.estados || []
+        estados: opcionesData.estados || []
       };
 
       setOpciones(data);

@@ -25,7 +25,16 @@ export const useAuthStore = create((set, get) => ({
   login: async (email, password) => {
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { token, user } = response.data;
+      const apiData = response.data;
+      
+      if (!apiData.success) {
+        return { 
+          success: false, 
+          message: apiData.mensaje || 'Error al iniciar sesión' 
+        };
+      }
+      
+      const { token, user } = apiData.data;
       
       localStorage.setItem('token', token);
       const nivel = user.nivel || 'USUARIO';
@@ -43,7 +52,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       return { 
         success: false, 
-        message: error.response?.data?.message || 'Error al iniciar sesión' 
+        message: error.response?.data?.mensaje || error.response?.data?.error || 'Error al iniciar sesión' 
       };
     }
   },
@@ -56,12 +65,16 @@ export const useAuthStore = create((set, get) => ({
   fetchUser: async () => {
     try {
       const response = await api.get('/auth/me');
-      console.log('/auth/me response:', response.data);
-      const user = response.data;
+      const apiData = response.data;
+      
+      if (!apiData.success) {
+        get().logout();
+        return;
+      }
+      
+      const user = apiData.data;
       const nivel = user.nivel || user.role || 'USUARIO';
-      console.log('nivel determined:', nivel);
       const allowedTabs = getAllowedTabs(nivel);
-      console.log('allowedTabs:', allowedTabs);
       set({ user, nivel, allowedTabs });
     } catch (error) {
       console.error('fetchUser error:', error);

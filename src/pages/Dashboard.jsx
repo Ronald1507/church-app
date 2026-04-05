@@ -21,20 +21,25 @@ export default function Dashboard() {
         api.get('/eventos'),
       ]);
 
+      // Extraer datos del formato ApiResponse
+      const members = membersRes.data?.success ? membersRes.data.data : [];
+      const transacciones = transaccionesRes.data?.success ? transaccionesRes.data.data : [];
+      const eventos = eventsRes.data?.success ? eventsRes.data.data : [];
+
       // Obtener solo transacciones del mes actual
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const transaccionesMes = transaccionesRes.data.filter(t => 
+      const transaccionesMes = transacciones.filter(t => 
         new Date(t.fecha) >= startOfMonth
       );
       
-      const totalMembers = membersRes.data.length;
+      const totalMembers = members.length;
       const monthlyIncome = transaccionesMes
         .filter((t) => t.tipo === 'ingreso')
         .reduce((sum, t) => sum + parseFloat(t.monto), 0);
 
       // Obtener próximos eventos (futuros)
-      const upcomingEvents = eventsRes.data
+      const upcomingEvents = eventos
         .filter(e => new Date(e.fecha_inicio) >= now)
         .slice(0, 5);
 

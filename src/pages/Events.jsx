@@ -92,7 +92,7 @@ export default function Events() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-xl md:text-2xl font-bold">Eventos</h1>
         <button
-          onClick={openCreateModal}
+          onClick={handleOpenModal}
           className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
         >
           Agregar Evento
