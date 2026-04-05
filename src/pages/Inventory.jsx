@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useInventoryStore } from '../store/inventoryStore';
-import api from '../services/api';
+import { useOpciones } from '../hooks/useOpciones';
 
 export default function Inventory() {
   const { items, loading, fetchItems, createItem, updateItem, deleteItem, fetchEstados, fetchItemsByEstado, estados, filtroEstado } = useInventoryStore();
@@ -9,26 +9,45 @@ export default function Inventory() {
   const [editingItem, setEditingItem] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [] });
   
+  // Lazy load opciones - solo cuando se necesitan
+  const { loadOpciones } = useOpciones('/inventario/opciones', fetchEstados);
+  
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
+  // Solo cargar items al inicio
   useEffect(() => {
     fetchItems();
-    fetchMeta();
-    fetchEstados();
   }, []);
 
-  const fetchMeta = async () => {
-    try {
-      const response = await api.get('/inventario/opciones');
-      setMeta(response.data);
-    } catch (error) {
-      console.error('Error fetching meta:', error);
-    }
+  // Abrir modal - carga opciones bajo demanda
+  const openCreateModal = async () => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingItem(null);
+    reset({ id_estado: '', id_congregacion: '' });
+    setIsModalOpen(true);
   };
 
+  // Editar - carga opciones bajo demanda
+  const handleEdit = async (item) => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingItem(item);
+    Object.keys(item).forEach(key => {
+      if (key !== 'congregacion' && key !== 'estado') {
+        setValue(key, item[key] || '');
+      }
+    });
+    setValue('id_estado', item.id_estado);
+    setValue('id_congregacion', item.id_congregacion);
+    setIsModalOpen(true);
+  };
+
+  // Filtrar por estado - carga opciones bajo demanda
   const handleFiltrarPorEstado = async (idEstado) => {
+    await loadOpciones();
+    
     if (filtroEstado === idEstado) {
-      // Si ya está seleccionado, volver a todos
       await fetchItems();
     } else {
       await fetchItemsByEstado(idEstado);
@@ -58,28 +77,10 @@ export default function Inventory() {
     }
   };
 
-  const handleEdit = (item) => {
-    setEditingItem(item);
-    Object.keys(item).forEach(key => {
-      if (key !== 'congregacion' && key !== 'estado') {
-        setValue(key, item[key] || '');
-      }
-    });
-    setValue('id_estado', item.id_estado);
-    setValue('id_congregacion', item.id_congregacion);
-    setIsModalOpen(true);
-  };
-
   const handleDelete = async (id) => {
     if (confirm('¿Estás seguro de eliminar este item?')) {
       await deleteItem(id);
     }
-  };
-
-  const openCreateModal = () => {
-    setEditingItem(null);
-    reset({ id_estado: '', id_congregacion: '' });
-    setIsModalOpen(true);
   };
 
   const formatCurrency = (amount) => {

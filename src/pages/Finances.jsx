@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useFinanceStore } from '../store/financeStore';
-import api from '../services/api';
+import { useOpciones } from '../hooks/useOpciones';
 
 export default function Finances() {
   const { cuentas, transacciones, loading, fetchCuentas, fetchTransacciones, createCuenta, createTransaccion, deleteTransaccion, deleteCuenta, fetchEstados, fetchCuentasByEstado, estados, filtroEstado } = useFinanceStore();
@@ -9,37 +9,35 @@ export default function Finances() {
   const [modalType, setModalType] = useState('cuenta'); // 'cuenta' o 'transaccion'
   const [meta, setMeta] = useState({ estados: [], congregaciones: [] });
   
+  // Lazy load opciones - solo cuando se necesitan
+  const { loadOpciones } = useOpciones('/finanzas/opciones', fetchEstados);
+  
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
+  // Solo cargar datos al inicio
   useEffect(() => {
     fetchCuentas();
     fetchTransacciones();
-    fetchMeta();
-    fetchEstados();
   }, []);
 
-  const fetchMeta = async () => {
-    try {
-      const response = await api.get('/finanzas/opciones');
-      setMeta(response.data);
-    } catch (error) {
-      console.error('Error fetching meta:', error);
-    }
+  // Abrir modal - carga opciones bajo demanda
+  const openModal = async (type) => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setModalType(type);
+    setIsModalOpen(true);
+    reset({ id_estado: '', id_congregacion: '' });
   };
 
+  // Filtrar por estado - carga opciones bajo demanda
   const handleFiltrarPorEstado = async (idEstado) => {
+    await loadOpciones();
+    
     if (filtroEstado === idEstado) {
-      // Si ya está seleccionado, volver a todos
       await fetchCuentas();
     } else {
       await fetchCuentasByEstado(idEstado);
     }
-  };
-
-  const openModal = (type) => {
-    setModalType(type);
-    setIsModalOpen(true);
-    reset({ id_estado: '', id_congregacion: '' });
   };
 
   const onSubmit = async (data) => {

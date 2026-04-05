@@ -1,37 +1,78 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMemberStore } from '../store/memberStore';
-import api from '../services/api';
+import { useOpciones } from '../hooks/useOpciones';
 
 export default function Members() {
-  const { members, loading, fetchMembers, createMember, updateMember, deleteMember, fetchEstados, fetchMembersByEstado, estados, filtroEstado } = useMemberStore();
+  const { 
+    members, 
+    loading, 
+    fetchMembers, 
+    createMember, 
+    updateMember, 
+    deleteMember, 
+    fetchEstados, 
+    fetchMembersByEstado, 
+    estados, 
+    filtroEstado,
+    toggleMemberStatus
+  } = useMemberStore();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [], instituciones: [] });
   
+  // Lazy load opciones - solo cuando se necesitan
+  const { loadOpciones } = useOpciones('/miembros/opciones', fetchEstados);
+  
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
+  // Solo cargar miembros al inicio
   useEffect(() => {
     fetchMembers();
-    fetchMeta();
-    fetchEstados();
   }, []);
 
-  const fetchMeta = async () => {
-    try {
-      const response = await api.get('/miembros/opciones');
-      setMeta(response.data);
-    } catch (error) {
-      console.error('Error fetching meta:', error);
-    }
+  // Abrir modal - carga opciones bajo demanda
+  const handleOpenModal = async () => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setIsModalOpen(true);
   };
 
+  // Editar - carga opciones bajo demanda
+  const handleEdit = async (member) => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingMember(member);
+    setValue('nombres', member.nombres);
+    setValue('apellidos', member.apellidos);
+    setValue('fecha_nacimiento', member.fecha_nacimiento ? member.fecha_nacimiento.split('T')[0] : '');
+    setValue('genero', member.genero || '');
+    setValue('estado_civil', member.estado_civil || '');
+    setValue('rut', member.rut || '');
+    setValue('telefono', member.telefono || '');
+    setValue('email', member.email || '');
+    setValue('direccion', member.direccion || '');
+    setValue('id_estado', member.id_estado);
+    setValue('id_congregacion', member.id_congregacion);
+    setValue('id_tipo_miembro', member.id_tipo_miembro);
+    setIsModalOpen(true);
+  };
+
+  // Filtrar por estado - carga opciones bajo demanda
   const handleFiltrarPorEstado = async (idEstado) => {
+    await loadOpciones();
+    
     if (filtroEstado === idEstado) {
-      // Si ya está seleccionado, volver a todos
       await fetchMembers();
     } else {
       await fetchMembersByEstado(idEstado);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm('¿Estás seguro de ELIMINAR este miembro? Esta acción no se puede deshacer.')) {
+      await deleteMember(id);
     }
   };
 
@@ -57,35 +98,6 @@ export default function Members() {
     }
   };
 
-  const handleEdit = (member) => {
-    setEditingMember(member);
-    Object.keys(member).forEach(key => {
-      if (key !== 'estado' && key !== 'congregacion' && key !== 'tipoMiembro' && key !== 'miembroInstitucions') {
-        setValue(key, member[key]);
-      }
-    });
-    setValue('id_estado', member.id_estado);
-    setValue('id_congregacion', member.id_congregacion);
-    setValue('id_tipo_miembro', member.id_tipo_miembro);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (confirm('¿Estás seguro de eliminar este miembro?')) {
-      await deleteMember(id);
-    }
-  };
-
-  const openCreateModal = () => {
-    setEditingMember(null);
-    reset({
-      id_estado: '',
-      id_congregacion: '',
-      id_tipo_miembro: ''
-    });
-    setIsModalOpen(true);
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('es-CL');
@@ -96,14 +108,14 @@ export default function Members() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-xl md:text-2xl font-bold">Miembros</h1>
         <button
-          onClick={openCreateModal}
+          onClick={handleOpenModal}
           className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
         >
           Agregar Miembro
         </button>
       </div>
 
-      {/* Filtro dinámico por estado */}
+      {/* Filtro por estado */}
       {estados.length > 0 && (
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
@@ -160,7 +172,7 @@ export default function Members() {
                       {member.tipoMiembro?.nombre || '-'}
                     </span>
                     <span className={`text-xs px-2 py-1 rounded ${
-                      member.estado?.nombre === 'Activo' 
+                      member.estado?.codigo === 'ACTIVO' 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
@@ -175,7 +187,7 @@ export default function Members() {
                   >
                     Editar
                   </button>
-                  {member.id_estado === 6 ? (
+                  {member.estado?.codigo !== 'ACTIVO' && (
                     <button
                       onClick={async () => {
                         if (confirm('¿Activar este miembro?')) {
@@ -186,7 +198,8 @@ export default function Members() {
                     >
                       Activar
                     </button>
-                  ) : member.id_estado !== 21 && (
+                  )}
+                  {member.estado?.codigo === 'ACTIVO' && (
                     <button
                       onClick={async () => {
                         if (confirm('¿Inactivar este miembro?')) {
@@ -198,13 +211,9 @@ export default function Members() {
                       Inactivar
                     </button>
                   )}
-                  {member.id_estado !== 21 && (
+                  {member.estado?.codigo !== 'ELIMINADO' && (
                     <button
-                      onClick={async () => {
-                        if (confirm('¿Estás seguro de ELIMINAR este miembro? Esta acción no se puede deshacer.')) {
-                          await deleteMember(member.id_miembro);
-                        }
-                      }}
+                      onClick={() => handleDelete(member.id_miembro)}
                       className="text-red-600 hover:text-red-900 text-sm"
                     >
                       Eliminar
@@ -217,6 +226,7 @@ export default function Members() {
         </div>
       )}
 
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">

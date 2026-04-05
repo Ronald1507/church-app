@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useCongregationStore } from '../store/congregationStore';
-import api from '../services/api';
+import { useOpciones } from '../hooks/useOpciones';
 
 export default function Congregations() {
   const { congregaciones, loading, fetchCongregaciones, createCongregacion, updateCongregacion, deleteCongregacion, fetchEstados, fetchCongregacionesByEstado, estados, filtroEstado } = useCongregationStore();
@@ -9,26 +9,44 @@ export default function Congregations() {
   const [editingCongregation, setEditingCongregation] = useState(null);
   const [meta, setMeta] = useState({ estados: [] });
   
+  // Lazy load opciones - solo cuando se necesitan
+  const { loadOpciones } = useOpciones('/congregaciones/opciones', fetchEstados);
+  
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
+  // Solo cargar congregaciones al inicio
   useEffect(() => {
     fetchCongregaciones();
-    fetchMeta();
-    fetchEstados();
   }, []);
 
-  const fetchMeta = async () => {
-    try {
-      const response = await api.get('/congregaciones/opciones');
-      setMeta(response.data);
-    } catch (error) {
-      console.error('Error fetching meta:', error);
-    }
+  // Abrir modal - carga opciones bajo demanda
+  const openCreateModal = async () => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingCongregation(null);
+    reset({ id_estado: '' });
+    setIsModalOpen(true);
   };
 
+  // Editar - carga opciones bajo demanda
+  const handleEdit = async (cong) => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingCongregation(cong);
+    Object.keys(cong).forEach(key => {
+      if (key !== 'estado') {
+        setValue(key, cong[key] || '');
+      }
+    });
+    setValue('id_estado', cong.id_estado);
+    setIsModalOpen(true);
+  };
+
+  // Filtrar por estado - carga opciones bajo demanda
   const handleFiltrarPorEstado = async (idEstado) => {
+    await loadOpciones();
+    
     if (filtroEstado === idEstado) {
-      // Si ya está seleccionado, volver a todos
       await fetchCongregaciones();
     } else {
       await fetchCongregacionesByEstado(idEstado);
@@ -56,27 +74,10 @@ export default function Congregations() {
     }
   };
 
-  const handleEdit = (cong) => {
-    setEditingCongregation(cong);
-    Object.keys(cong).forEach(key => {
-      if (key !== 'estado') {
-        setValue(key, cong[key] || '');
-      }
-    });
-    setValue('id_estado', cong.id_estado);
-    setIsModalOpen(true);
-  };
-
   const handleDelete = async (id) => {
     if (confirm('¿Estás seguro de eliminar esta congregación?')) {
       await deleteCongregacion(id);
     }
-  };
-
-  const openCreateModal = () => {
-    setEditingCongregation(null);
-    reset({ id_estado: '' });
-    setIsModalOpen(true);
   };
 
   return (

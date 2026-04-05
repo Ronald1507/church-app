@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useEventStore } from '../store/eventStore';
-import api from '../services/api';
+import { useOpciones } from '../hooks/useOpciones';
 
 export default function Events() {
   const { eventos, loading, fetchEventos, createEvento, updateEvento, deleteEvento, fetchEstados, fetchEventosByEstado, estados, filtroEstado } = useEventStore();
@@ -9,26 +9,45 @@ export default function Events() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [] });
   
+  // Lazy load opciones - solo cuando se necesitan
+  const { loadOpciones } = useOpciones('/eventos/opciones', fetchEstados);
+  
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
+  // Solo cargar eventos al inicio
   useEffect(() => {
     fetchEventos();
-    fetchMeta();
-    fetchEstados();
   }, []);
 
-  const fetchMeta = async () => {
-    try {
-      const response = await api.get('/eventos/opciones');
-      setMeta(response.data);
-    } catch (error) {
-      console.error('Error fetching meta:', error);
-    }
+  // Abrir modal - carga opciones bajo demanda
+  const handleOpenModal = async () => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingEvent(null);
+    reset({ id_estado: '', id_congregacion: '' });
+    setIsModalOpen(true);
   };
 
+  // Editar - carga opciones bajo demanda
+  const handleEdit = async (event) => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingEvent(event);
+    Object.keys(event).forEach(key => {
+      if (key !== 'congregacion' && key !== 'estado') {
+        setValue(key, event[key] || '');
+      }
+    });
+    setValue('id_estado', event.id_estado);
+    setValue('id_congregacion', event.id_congregacion);
+    setIsModalOpen(true);
+  };
+
+  // Filtrar por estado - carga opciones bajo demanda
   const handleFiltrarPorEstado = async (idEstado) => {
+    await loadOpciones();
+    
     if (filtroEstado === idEstado) {
-      // Si ya está seleccionado, volver a todos
       await fetchEventos();
     } else {
       await fetchEventosByEstado(idEstado);
@@ -57,28 +76,10 @@ export default function Events() {
     }
   };
 
-  const handleEdit = (event) => {
-    setEditingEvent(event);
-    Object.keys(event).forEach(key => {
-      if (key !== 'congregacion' && key !== 'estado') {
-        setValue(key, event[key] || '');
-      }
-    });
-    setValue('id_estado', event.id_estado);
-    setValue('id_congregacion', event.id_congregacion);
-    setIsModalOpen(true);
-  };
-
   const handleDelete = async (id) => {
     if (confirm('¿Estás seguro de eliminar este evento?')) {
       await deleteEvento(id);
     }
-  };
-
-  const openCreateModal = () => {
-    setEditingEvent(null);
-    reset({ id_estado: '', id_congregacion: '' });
-    setIsModalOpen(true);
   };
 
   const formatDate = (dateString) => {

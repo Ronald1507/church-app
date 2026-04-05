@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useInstitutionStore } from '../store/institutionStore';
-import api from '../services/api';
+import { useOpciones } from '../hooks/useOpciones';
 
 export default function Institutions() {
   const { instituciones, loading, fetchInstituciones, createInstitucion, updateInstitucion, deleteInstitucion, fetchEstados, fetchInstitucionesByEstado, estados, filtroEstado } = useInstitutionStore();
@@ -9,29 +9,49 @@ export default function Institutions() {
   const [editingInstitution, setEditingInstitution] = useState(null);
   const [meta, setMeta] = useState({ estados: [], congregaciones: [], tipos: [] });
   
+  // Lazy load opciones - solo cuando se necesitan
+  const { loadOpciones } = useOpciones('/instituciones/opciones', fetchEstados);
+  
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
   useEffect(() => {
     fetchInstituciones();
-    fetchMeta();
-    fetchEstados();
   }, []);
 
-  const fetchMeta = async () => {
-    try {
-      const response = await api.get('/instituciones/opciones');
-      setMeta(response.data);
-    } catch (error) {
-      console.error('Error fetching meta:', error);
-    }
+  // Abrir modal - carga opciones bajo demanda
+  const handleOpenModal = async () => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setIsModalOpen(true);
   };
 
+  // Editar - carga opciones bajo demanda
+  const handleEdit = async (institution) => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingInstitution(institution);
+    setValue('nombre', institution.nombre);
+    setValue('tipo', institution.tipo);
+    setValue('descripcion', institution.descripcion || '');
+    setValue('id_congregacion', institution.id_congregacion);
+    setValue('id_estado', institution.id_estado);
+    setIsModalOpen(true);
+  };
+
+  // Filtrar por estado - carga opciones bajo demanda
   const handleFiltrarPorEstado = async (idEstado) => {
+    await loadOpciones();
+    
     if (filtroEstado === idEstado) {
-      // Si ya está seleccionado, volver a todos
       await fetchInstituciones();
     } else {
       await fetchInstitucionesByEstado(idEstado);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (confirm('¿Estás seguro de eliminar esta institución?')) {
+      await deleteInstitucion(id);
     }
   };
 
@@ -56,43 +76,19 @@ export default function Institutions() {
     }
   };
 
-  const handleEdit = (institution) => {
-    setEditingInstitution(institution);
-    Object.keys(institution).forEach(key => {
-      if (key !== 'congregacion' && key !== 'estado') {
-        setValue(key, institution[key] || '');
-      }
-    });
-    setValue('id_estado', institution.id_estado);
-    setValue('id_congregacion', institution.id_congregacion);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (confirm('¿Estás seguro de eliminar esta institución?')) {
-      await deleteInstitucion(id);
-    }
-  };
-
-  const openCreateModal = () => {
-    setEditingInstitution(null);
-    reset({ id_estado: '', id_congregacion: '' });
-    setIsModalOpen(true);
-  };
-
   return (
     <div className="p-4 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-xl md:text-2xl font-bold">Instituciones</h1>
         <button
-          onClick={openCreateModal}
+          onClick={handleOpenModal}
           className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
         >
           Agregar Institución
         </button>
       </div>
 
-      {/* Filtro dinámico por estado */}
+      {/* Filtro por estado */}
       {estados.length > 0 && (
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
@@ -199,7 +195,7 @@ export default function Institutions() {
                 >
                   <option value="">Seleccionar</option>
                   {meta.tipos.map(tipo => (
-                    <option key={tipo} value={tipo}>{tipo}</option>
+                    <option key={tipo.id || tipo} value={tipo.id || tipo}>{tipo.nombre || tipo}</option>
                   ))}
                 </select>
               </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useUserStore } from '../store/userStore';
-import api from '../services/api';
+import { useOpciones } from '../hooks/useOpciones';
 
 export default function Users() {
   const { usuarios, loading, fetchUsuarios, createUsuario, updateUsuario, deleteUsuario, fetchEstados, fetchUsuariosByEstado, estados, filtroEstado } = useUserStore();
@@ -9,26 +9,43 @@ export default function Users() {
   const [editingUser, setEditingUser] = useState(null);
   const [meta, setMeta] = useState({ roles: [], estados: [], miembros: [] });
   
+  // Lazy load opciones - solo cuando se necesitan
+  const { loadOpciones } = useOpciones('/usuarios/opciones', fetchEstados);
+  
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
+  // Solo cargar usuarios al inicio
   useEffect(() => {
     fetchUsuarios();
-    fetchMeta();
-    fetchEstados();
   }, []);
 
-  const fetchMeta = async () => {
-    try {
-      const response = await api.get('/usuarios/opciones');
-      setMeta(response.data);
-    } catch (error) {
-      console.error('Error fetching meta:', error);
-    }
+  // Abrir modal - carga opciones bajo demanda
+  const openCreateModal = async () => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingUser(null);
+    reset({ id_rol: '', id_estado: '', id_miembro: '' });
+    setIsModalOpen(true);
   };
 
+  // Editar - carga opciones bajo demanda
+  const handleEdit = async (user) => {
+    const data = await loadOpciones();
+    setMeta(data);
+    setEditingUser(user);
+    setValue('username', user.username);
+    setValue('email', user.email);
+    setValue('id_rol', user.id_rol);
+    setValue('id_estado', user.id_estado);
+    setValue('id_miembro', user.id_miembro || '');
+    setIsModalOpen(true);
+  };
+
+  // Filtrar por estado - carga opciones bajo demanda
   const handleFiltrarPorEstado = async (idEstado) => {
+    await loadOpciones();
+    
     if (filtroEstado === idEstado) {
-      // Si ya está seleccionado, volver a todos
       await fetchUsuarios();
     } else {
       await fetchUsuariosByEstado(idEstado);
@@ -63,26 +80,10 @@ export default function Users() {
     }
   };
 
-  const handleEdit = (user) => {
-    setEditingUser(user);
-    setValue('username', user.username);
-    setValue('email', user.email);
-    setValue('id_rol', user.id_rol);
-    setValue('id_estado', user.id_estado);
-    setValue('id_miembro', user.id_miembro || '');
-    setIsModalOpen(true);
-  };
-
   const handleDelete = async (id) => {
     if (confirm('¿Estás seguro de eliminar este usuario?')) {
       await deleteUsuario(id);
     }
-  };
-
-  const openCreateModal = () => {
-    setEditingUser(null);
-    reset({ id_rol: '', id_estado: '', id_miembro: '' });
-    setIsModalOpen(true);
   };
 
   return (
