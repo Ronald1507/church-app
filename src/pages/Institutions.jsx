@@ -25,16 +25,18 @@ export default function Institutions() {
     setIsModalOpen(true);
   };
 
-  // Editar - carga opciones bajo demanda
+  // Editar - carga opciones al abrir modal
   const handleEdit = async (institution) => {
-    const data = await loadOpciones();
-    setMeta(data);
     setEditingInstitution(institution);
     setValue('nombre', institution.nombre);
     setValue('tipo', institution.tipo);
     setValue('descripcion', institution.descripcion || '');
     setValue('id_congregacion', institution.id_congregacion);
     setValue('id_estado', institution.id_estado);
+    
+    // Cargar opciones al abrir modal (no antes)
+    const data = await loadOpciones();
+    setMeta(data);
     setIsModalOpen(true);
   };
 

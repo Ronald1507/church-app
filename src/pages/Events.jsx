@@ -28,10 +28,8 @@ export default function Events() {
     setIsModalOpen(true);
   };
 
-  // Editar - carga opciones bajo demanda
+  // Editar - carga opciones al abrir modal
   const handleEdit = async (event) => {
-    const data = await loadOpciones();
-    setMeta(data);
     setEditingEvent(event);
     Object.keys(event).forEach(key => {
       if (key !== 'congregacion' && key !== 'estado') {
@@ -40,6 +38,10 @@ export default function Events() {
     });
     setValue('id_estado', event.id_estado);
     setValue('id_congregacion', event.id_congregacion);
+    
+    // Cargar opciones al abrir modal (no antes)
+    const data = await loadOpciones();
+    setMeta(data);
     setIsModalOpen(true);
   };
 

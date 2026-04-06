@@ -28,16 +28,18 @@ export default function Users() {
     setIsModalOpen(true);
   };
 
-  // Editar - carga opciones bajo demanda
+  // Editar - carga opciones al abrir modal
   const handleEdit = async (user) => {
-    const data = await loadOpciones();
-    setMeta(data);
     setEditingUser(user);
     setValue('username', user.username);
     setValue('email', user.email);
     setValue('id_rol', user.id_rol);
     setValue('id_estado', user.id_estado);
     setValue('id_miembro', user.id_miembro || '');
+    
+    // Cargar opciones al abrir modal (no antes)
+    const data = await loadOpciones();
+    setMeta(data);
     setIsModalOpen(true);
   };
 

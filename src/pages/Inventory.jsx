@@ -28,10 +28,8 @@ export default function Inventory() {
     setIsModalOpen(true);
   };
 
-  // Editar - carga opciones bajo demanda
+  // Editar - carga opciones al abrir modal
   const handleEdit = async (item) => {
-    const data = await loadOpciones();
-    setMeta(data);
     setEditingItem(item);
     Object.keys(item).forEach(key => {
       if (key !== 'congregacion' && key !== 'estado') {
@@ -40,6 +38,10 @@ export default function Inventory() {
     });
     setValue('id_estado', item.id_estado);
     setValue('id_congregacion', item.id_congregacion);
+    
+    // Cargar opciones al abrir modal (no antes)
+    const data = await loadOpciones();
+    setMeta(data);
     setIsModalOpen(true);
   };
 

@@ -28,10 +28,8 @@ export default function Congregations() {
     setIsModalOpen(true);
   };
 
-  // Editar - carga opciones bajo demanda
+  // Editar - carga opciones al abrir modal
   const handleEdit = async (cong) => {
-    const data = await loadOpciones();
-    setMeta(data);
     setEditingCongregation(cong);
     Object.keys(cong).forEach(key => {
       if (key !== 'estado') {
@@ -39,6 +37,10 @@ export default function Congregations() {
       }
     });
     setValue('id_estado', cong.id_estado);
+    
+    // Cargar opciones al abrir modal (no antes)
+    const data = await loadOpciones();
+    setMeta(data);
     setIsModalOpen(true);
   };
 
