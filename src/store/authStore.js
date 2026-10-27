@@ -5,9 +5,9 @@ import api from '../services/api';
 const getAllowedTabs = (nivel) => {
   switch (nivel) {
     case 'SUPERADMIN':
-      return ['dashboard', 'members', 'institutions', 'finances', 'events', 'inventory', 'users', 'congregations'];
+      return ['dashboard', 'members', 'institutions', 'finances', 'events', 'inventory', 'users', 'congregations', 'family', 'spiritual', 'pastoral', 'communications', 'documents', 'offerings', 'audit'];
     case 'ADMIN':
-      return ['dashboard', 'members', 'institutions', 'finances', 'events', 'inventory'];
+      return ['dashboard', 'members', 'institutions', 'finances', 'events', 'inventory', 'family', 'spiritual', 'pastoral', 'communications', 'documents', 'offerings'];
     case 'USUARIO':
       return ['dashboard', 'events', 'profile'];
     default:
