@@ -1,423 +1,263 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useFinanceStore } from '../store/financeStore';
-import { useOpciones } from '../hooks/useOpciones';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { toast } from 'sonner';
+import { Wallet, Plus, Building, Edit2, Trash2, RefreshCw } from 'lucide-react';
 
 export default function Finances() {
-  const { cuentas, transacciones, loading, fetchCuentas, fetchTransacciones, createCuenta, createTransaccion, deleteTransaccion, deleteCuenta, fetchEstados, fetchCuentasByEstado, estados, filtroEstado } = useFinanceStore();
+  const navigate = useNavigate();
+  const [cuentas, setCuentas] = useState([]);
+  const [instituciones, setInstituciones] = useState([]);
+  const [estadosCuentas, setEstadosCuentas] = useState([]);
+  const [congregaciones, setCongregaciones] = useState([]);
+  const [tiposCuenta, setTiposCuenta] = useState([]);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState('cuenta'); // 'cuenta' o 'transaccion'
-  const [meta, setMeta] = useState({ estados: [], congregaciones: [] });
+  const [editingItem, setEditingItem] = useState(null);
   
-  // Lazy load opciones - solo cuando se necesitan
-  const { loadOpciones } = useOpciones('/finanzas/opciones', fetchEstados);
-  
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
 
-  // Solo cargar datos al inicio
   useEffect(() => {
-    fetchCuentas();
-    fetchTransacciones();
+    loadData();
   }, []);
 
-  // Abrir modal - carga opciones bajo demanda
-  const openModal = async (type) => {
-    const data = await loadOpciones();
-    setMeta(data);
-    setModalType(type);
-    setIsModalOpen(true);
-    reset({ id_estado: '', id_congregacion: '' });
+  const loadData = async () => {
+    try {
+      const [cuentasRes, estadosRes, congregRes, instRes, tiposRes] = await Promise.all([
+        api.get('/finanzas/cuentas'),
+        api.get('/finanzas/listado/estados-cuentas'),
+        api.get('/finanzas/listado/congregaciones'),
+        api.get('/finanzas/listado/instituciones'),
+        api.get('/finanzas/listado/tipos-cuenta')
+      ]);
+      
+      setCuentas(cuentasRes.data?.success ? cuentasRes.data.data : []);
+      setEstadosCuentas(estadosRes.data?.success ? estadosRes.data.data : []);
+      setCongregaciones(congregRes.data?.success ? congregRes.data.data : []);
+      setInstituciones(instRes.data?.success ? instRes.data.data : []);
+      setTiposCuenta(tiposRes.data?.success ? tiposRes.data.data : []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
   };
 
-  // Filtrar por estado - carga opciones bajo demanda
-  const handleFiltrarPorEstado = async (idEstado) => {
-    await loadOpciones();
+  const openModal = async (item = null) => {
+    setEditingItem(item);
+    reset();
     
-    if (filtroEstado === idEstado) {
-      await fetchCuentas();
-    } else {
-      await fetchCuentasByEstado(idEstado);
+    if (item) {
+      setValue('nombre', item.nombre);
+      setValue('tipo', item.tipo);
+      setValue('descripcion', item.descripcion || '');
+      setValue('id_congregacion', item.id_congregacion);
+      setValue('id_institucion', item.id_institucion || '');
+      setValue('id_estado', item.id_estado);
     }
+    
+    setIsModalOpen(true);
   };
 
   const onSubmit = async (data) => {
-    let result;
-    if (modalType === 'cuenta') {
-      result = await createCuenta({
+    try {
+      const payload = {
         ...data,
         id_estado: parseInt(data.id_estado),
-        id_congregacion: parseInt(data.id_congregacion)
-      });
-    } else {
-      result = await createTransaccion({
-        ...data,
-        id_cuenta: parseInt(data.id_cuenta),
-        monto: parseFloat(data.monto),
-        id_estado: parseInt(data.id_estado),
-        id_registrado_por: 1 // Por ahora hardcodeado
-      });
-    }
-    
-    if (result.success) {
-      setIsModalOpen(false);
-      reset();
-      if (modalType === 'cuenta') fetchCuentas();
-      else fetchTransacciones();
-    }
-  };
+        id_congregacion: parseInt(data.id_congregacion),
+        id_institucion: data.id_institucion ? parseInt(data.id_institucion) : null
+      };
+      
+      let result;
+      if (editingItem) {
+        const response = await api.put(`/finanzas/cuentas/${editingItem.id_cuenta}`, payload);
+        result = response.data;
+      } else {
+        const response = await api.post('/finanzas/cuentas', payload);
+        result = response.data;
+      }
 
-  const handleDeleteTransaccion = async (id) => {
-    if (confirm('¿Estás seguro de eliminar esta transacción?')) {
-      await deleteTransaccion(id);
-    }
-  };
-
-  const handleDeleteCuenta = async (id) => {
-    if (confirm('¿Estás seguro de eliminar esta cuenta? Se eliminarán todas las transacciones relacionadas.')) {
-      await deleteCuenta(id);
+      if (result?.success) {
+        toast.success(editingItem ? 'Cuenta actualizada' : 'Cuenta creada');
+        setIsModalOpen(false);
+        loadData();
+      } else {
+        toast.error(result?.mensaje || 'Error al guardar');
+      }
+    } catch (error) {
+      toast.error('Error al guardar');
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(amount);
+  const handleDelete = async (id) => {
+    toast('¿Eliminar esta cuenta?', {
+      action: {
+        label: 'Eliminar',
+        onClick: async () => {
+          try {
+            const response = await api.delete(`/finanzas/cuentas/${id}`);
+            if (response.data?.success) {
+              toast.success('Cuenta eliminada');
+              loadData();
+            }
+          } catch (error) {
+            toast.error('Error al eliminar');
+          }
+        },
+      },
+      duration: 5000,
+    });
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('es-CL');
+  const toggleStatus = async (id) => {
+    try {
+      const response = await api.patch(`/finanzas/cuentas/${id}/status`);
+      if (response.data?.success) {
+        toast.success(response.data.mensaje);
+        loadData();
+      }
+    } catch (error) {
+      toast.error('Error al cambiar estado');
+    }
   };
 
-  // Calcular totales
-  const totalIngresos = transacciones
-    .filter(t => t.tipo === 'ingreso')
-    .reduce((sum, t) => sum + parseFloat(t.monto), 0);
-  
-  const totalEgresos = transacciones
-    .filter(t => t.tipo === 'egreso')
-    .reduce((sum, t) => sum + parseFloat(t.monto), 0);
+  const formatMoney = (amount) => `$${parseFloat(amount || 0).toLocaleString()}`;
+
+  // Obtener nombre de institución o congregación
+  const getEntidadNombre = (cuenta) => {
+    if (cuenta.id_institucion) {
+      return cuenta.institucion?.nombre || 'Institución';
+    }
+    return 'Congregación';
+  };
 
   return (
     <div className="p-4 md:p-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-xl md:text-2xl font-bold">Finanzas</h1>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => openModal('cuenta')}
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm"
-          >
-            Nueva Cuenta
-          </button>
-          <button
-            onClick={() => openModal('transaccion')}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm"
-          >
-            Nueva Transacción
-          </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <Wallet className="w-6 h-6" />
+            Finanzas
+          </h1>
+          <p className="text-sm text-gray-500">{cuentas.length} cuentas</p>
         </div>
+        <button
+          onClick={() => openModal()}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          + Cuenta
+        </button>
       </div>
 
-      {/* Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">Total Ingresos</h3>
-          <p className="text-xl md:text-2xl font-bold text-green-600">{formatCurrency(totalIngresos)}</p>
-        </div>
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">Total Egresos</h3>
-          <p className="text-xl md:text-2xl font-bold text-red-600">{formatCurrency(totalEgresos)}</p>
-        </div>
-        <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">Balance</h3>
-          <p className={`text-xl md:text-2xl font-bold ${totalIngresos - totalEgresos >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(totalIngresos - totalEgresos)}
-          </p>
-        </div>
-      </div>
-
-      {/* Cuentas */}
-      <div className="mb-8">
-        <h2 className="text-lg md:text-xl font-bold mb-4">Cuentas</h2>
-        
-        {/* Filtro dinámico por estado */}
-        {estados.length > 0 && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por estado:</label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => fetchCuentas()}
-                className={`px-3 py-1.5 rounded text-sm ${
-                  filtroEstado === null
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Todos
-              </button>
-              {estados.map((estado) => (
-                <button
-                  key={estado.id_estado}
-                  onClick={() => handleFiltrarPorEstado(estado.id_estado)}
-                  className={`px-3 py-1.5 rounded text-sm ${
-                    filtroEstado === estado.id_estado
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {estado.nombre}
+      {/* Cards de cada cuenta */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {cuentas.map((cuenta) => (
+          <div 
+            key={cuenta.id_cuenta}
+            className={`bg-white rounded-xl shadow-sm border-2 p-4 cursor-pointer hover:shadow-md transition-all ${
+              cuenta.id_institucion ? 'border-purple-200 hover:border-purple-400' : 'border-blue-200 hover:border-blue-400'
+            }`}
+            onClick={() => {
+              const destino = cuenta.id_institucion 
+                ? `/finanzas/institucion/${cuenta.id_institucion}` 
+                : '/finanzas/congregacion';
+              navigate(destino, { state: { cuentaId: cuenta.id_cuenta } });
+            }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {cuenta.id_institucion ? (
+                  <Building className="w-4 h-4 text-purple-500" />
+                ) : (
+                  <Wallet className="w-4 h-4 text-blue-500" />
+                )}
+                <h3 className="font-bold text-lg">{cuenta.nombre}</h3>
+              </div>
+              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => openModal(cuenta)} className="p-1 text-gray-400 hover:text-indigo-600">
+                  <Edit2 className="w-4 h-4" />
                 </button>
-              ))}
+                <button onClick={() => toggleStatus(cuenta.id_cuenta)} className="p-1 text-gray-400 hover:text-yellow-600">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDelete(cuenta.id_cuenta)} className="p-1 text-gray-400 hover:text-red-600">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-800">{formatMoney(cuenta.saldo_actual)}</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className={`px-2 py-0.5 rounded text-xs ${
+                cuenta.estado?.nombre === 'ACTIVA' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {cuenta.estado?.nombre}
+              </span>
+              <span className={`text-xs ${
+                cuenta.id_institucion ? 'text-purple-600' : 'text-blue-600'
+              }`}>
+                {getEntidadNombre(cuenta)}
+              </span>
             </div>
           </div>
-        )}
-
-        {loading ? (
-          <p className="text-center py-4">Cargando...</p>
-        ) : cuentas.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">
-            {filtroEstado 
-              ? `No hay cuentas con el estado seleccionado` 
-              : 'No hay cuentas registradas'}
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cuentas.map((cuenta) => (
-              <div key={cuenta.id_cuenta} className="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-lg">{cuenta.nombre}</h3>
-                    <p className="text-sm text-gray-500">{cuenta.tipo}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteCuenta(cuenta.id_cuenta)}
-                    className="text-red-600 hover:text-red-900 text-sm"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-                <p className={`text-xl md:text-2xl font-bold mt-2 ${parseFloat(cuenta.saldo_actual) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(cuenta.saldo_actual)}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">{cuenta.congregacion?.nombre}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        ))}
       </div>
 
-      {/* Transacciones */}
-      <div>
-        <h2 className="text-lg md:text-xl font-bold mb-4">Transacciones Recientes</h2>
-        {loading ? (
-          <p className="text-center py-4">Cargando...</p>
-        ) : transacciones.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No hay transacciones registradas</p>
-        ) : (
-          <div className="space-y-4">
-            {transacciones.map((trans) => (
-              <div key={trans.id_transaccion} className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        trans.tipo === 'ingreso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {trans.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'}
-                      </span>
-                      <span className="text-sm text-gray-500">{formatDate(trans.fecha)}</span>
-                    </div>
-                    <h3 className="font-bold mt-1">{trans.concepto}</h3>
-                    <p className="text-sm text-gray-500">{trans.cuenta?.nombre || '-'}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-lg font-bold ${
-                      trans.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {trans.tipo === 'ingreso' ? '+' : '-'}{formatCurrency(trans.monto)}
-                    </p>
-                    <button
-                      onClick={() => handleDeleteTransaccion(trans.id_transaccion)}
-                      className="text-red-600 hover:text-red-900 text-sm mt-2"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Modal */}
+      {/* Modal cuenta */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg md:text-xl font-bold mb-4">
-              {modalType === 'cuenta' ? 'Nueva Cuenta' : 'Nueva Transacción'}
-            </h2>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {modalType === 'cuenta' ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Nombre *</label>
-                    <input
-                      {...register('nombre', { required: 'Nombre requerido' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                    {errors.nombre && <span className="text-red-500 text-sm">{errors.nombre.message}</span>}
-                  </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="bg-indigo-600 p-4 rounded-t-lg">
+              <h2 className="text-xl font-bold text-white">
+                {editingItem ? 'Editar Cuenta' : 'Nueva Cuenta'}
+              </h2>
+            </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Tipo *</label>
-                    <select
-                      {...register('tipo', { required: 'Tipo requerido' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Seleccionar</option>
-                      <option value="corriente">Cuenta Corriente</option>
-                      <option value="ahorro">Ahorro</option>
-                      <option value="efectivo">Efectivo</option>
-                    </select>
-                    {errors.tipo && <span className="text-red-500 text-sm">{errors.tipo.message}</span>}
-                  </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <input {...register('nombre', { required: true })} className="w-full px-3 py-2 border rounded-lg" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                  <select {...register('tipo', { required: true })} className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Seleccionar</option>
+                    {tiposCuenta.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Estado *</label>
+                  <select {...register('id_estado', { required: true })} className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Seleccionar</option>
+                    {estadosCuentas.map(e => <option key={e.id_estado} value={e.id_estado}>{e.nombre}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Congregación *</label>
+                <select {...register('id_congregacion', { required: true })} className="w-full px-3 py-2 border rounded-lg">
+                  <option value="">Seleccionar</option>
+                  {congregaciones.map(c => <option key={c.id_congregacion} value={c.id_congregacion}>{c.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Institución (opcional)</label>
+                <select {...register('id_institucion')} className="w-full px-3 py-2 border rounded-lg">
+                  <option value="">Sin institución</option>
+                  {instituciones.map(i => <option key={i.id_institucion} value={i.id_institucion}>{i.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <textarea {...register('descripcion')} className="w-full px-3 py-2 border rounded-lg" rows={2} />
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Descripción</label>
-                    <textarea
-                      {...register('descripcion')}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Congregación *</label>
-                    <select
-                      {...register('id_congregacion', { required: 'Congregación requerida' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Seleccionar</option>
-                      {meta.congregaciones.map(cong => (
-                        <option key={cong.id_congregacion} value={cong.id_congregacion}>{cong.nombre}</option>
-                      ))}
-                    </select>
-                    {errors.id_congregacion && <span className="text-red-500 text-sm">{errors.id_congregacion.message}</span>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Estado *</label>
-                    <select
-                      {...register('id_estado', { required: 'Estado requerido' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Seleccionar</option>
-                      {meta.estados.map(estado => (
-                        <option key={estado.id_estado} value={estado.id_estado}>{estado.nombre}</option>
-                      ))}
-                    </select>
-                    {errors.id_estado && <span className="text-red-500 text-sm">{errors.id_estado.message}</span>}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Cuenta *</label>
-                    <select
-                      {...register('id_cuenta', { required: 'Cuenta requerida' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Seleccionar</option>
-                      {cuentas.map(cuenta => (
-                        <option key={cuenta.id_cuenta} value={cuenta.id_cuenta}>{cuenta.nombre}</option>
-                      ))}
-                    </select>
-                    {errors.id_cuenta && <span className="text-red-500 text-sm">{errors.id_cuenta.message}</span>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Tipo *</label>
-                    <select
-                      {...register('tipo', { required: 'Tipo requerido' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Seleccionar</option>
-                      <option value="ingreso">Ingreso</option>
-                      <option value="egreso">Egreso</option>
-                    </select>
-                    {errors.tipo && <span className="text-red-500 text-sm">{errors.tipo.message}</span>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Concepto *</label>
-                    <input
-                      {...register('concepto', { required: 'Concepto requerido' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                    {errors.concepto && <span className="text-red-500 text-sm">{errors.concepto.message}</span>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Monto *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register('monto', { required: 'Monto requerido' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                    {errors.monto && <span className="text-red-500 text-sm">{errors.monto.message}</span>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Fecha</label>
-                    <input
-                      type="date"
-                      {...register('fecha')}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
-                    <select
-                      {...register('metodo_pago')}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Seleccionar</option>
-                      <option value="efectivo">Efectivo</option>
-                      <option value="transferencia">Transferencia</option>
-                      <option value="cheque">Cheque</option>
-                      <option value="otro">Otro</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Estado *</label>
-                    <select
-                      {...register('id_estado', { required: 'Estado requerido' })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="">Seleccionar</option>
-                      {meta.estados.map(estado => (
-                        <option key={estado.id_estado} value={estado.id_estado}>{estado.nombre}</option>
-                      ))}
-                    </select>
-                    {errors.id_estado && <span className="text-red-500 text-sm">{errors.id_estado.message}</span>}
-                  </div>
-                </>
-              )}
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-                >
-                  Crear
+              <div className="flex gap-3 pt-4">
+                <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-medium">
+                  {editingItem ? 'Actualizar' : 'Crear'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded hover:bg-gray-400"
-                >
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-medium">
                   Cancelar
                 </button>
               </div>

@@ -12,7 +12,7 @@ export const useInstitutionStore = create((set, get) => ({
     set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/instituciones');
-      const data = Array.isArray(response.data) ? response.data : [];
+      const data = Array.isArray(response.data.data) ? response.data.data : [];
       set({ instituciones: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -22,7 +22,7 @@ export const useInstitutionStore = create((set, get) => ({
   fetchEstados: async () => {
     try {
       const response = await api.get('/instituciones/opciones');
-      const estados = response.data.estados || [];
+      const estados = response.data.data?.estados || [];
       set({ estados });
       return estados;
     } catch (error) {
@@ -35,7 +35,7 @@ export const useInstitutionStore = create((set, get) => ({
     set({ loading: true, error: null, filtroEstado: idEstado });
     try {
       const response = await api.get(`/instituciones/estado/${idEstado}`);
-      const data = Array.isArray(response.data) ? response.data : [];
+      const data = Array.isArray(response.data.data) ? response.data.data : [];
       set({ instituciones: data, loading: false });
     } catch (error) {
       console.error('[fetchInstitucionesByEstado] Error:', error);
@@ -47,14 +47,18 @@ export const useInstitutionStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.post('/instituciones', data);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al crear' };
+      }
       set((state) => ({ 
-        instituciones: [...state.instituciones, response.data], 
+        instituciones: [...state.instituciones, response.data.data], 
         loading: false 
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 
@@ -62,21 +66,29 @@ export const useInstitutionStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.put(`/instituciones/${id}`, data);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al actualizar' };
+      }
       set((state) => ({
-        instituciones: state.instituciones.map((i) => (i.id_institucion === id ? response.data : i)),
+          instituciones: state.instituciones.map((i) => (i.id_institucion === id ? response.data.data : i)),
         loading: false,
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 
   deleteInstitucion: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/instituciones/${id}`);
+      const response = await api.delete(`/instituciones/${id}`);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al eliminar' };
+      }
       
       const filtroEstado = get().filtroEstado;
       
@@ -89,7 +101,7 @@ export const useInstitutionStore = create((set, get) => ({
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 }));

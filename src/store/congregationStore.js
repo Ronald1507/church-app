@@ -12,7 +12,7 @@ export const useCongregationStore = create((set, get) => ({
     set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/congregaciones');
-      const data = Array.isArray(response.data) ? response.data : [];
+      const data = Array.isArray(response.data.data) ? response.data.data : [];
       set({ congregaciones: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -22,7 +22,7 @@ export const useCongregationStore = create((set, get) => ({
   fetchEstados: async () => {
     try {
       const response = await api.get('/congregaciones/opciones');
-      const estados = response.data.estados || [];
+      const estados = response.data.data?.estados || [];
       set({ estados });
       return estados;
     } catch (error) {
@@ -35,7 +35,7 @@ export const useCongregationStore = create((set, get) => ({
     set({ loading: true, error: null, filtroEstado: idEstado });
     try {
       const response = await api.get(`/congregaciones/estado/${idEstado}`);
-      const data = Array.isArray(response.data) ? response.data : [];
+      const data = Array.isArray(response.data.data) ? response.data.data : [];
       set({ congregaciones: data, loading: false });
     } catch (error) {
       console.error('[fetchCongregacionesByEstado] Error:', error);
@@ -47,14 +47,18 @@ export const useCongregationStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.post('/congregaciones', data);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al crear' };
+      }
       set((state) => ({ 
-        congregaciones: [...state.congregaciones, response.data], 
+        congregaciones: [...state.congregaciones, response.data.data], 
         loading: false 
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 
@@ -62,21 +66,29 @@ export const useCongregationStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.put(`/congregaciones/${id}`, data);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al actualizar' };
+      }
       set((state) => ({
-        congregaciones: state.congregaciones.map((c) => (c.id_congregacion === id ? response.data : c)),
+          congregaciones: state.congregaciones.map((c) => (c.id_congregacion === id ? response.data.data : c)),
         loading: false,
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 
   deleteCongregacion: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/congregaciones/${id}`);
+      const response = await api.delete(`/congregaciones/${id}`);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al eliminar' };
+      }
       
       const filtroEstado = get().filtroEstado;
       
@@ -89,7 +101,7 @@ export const useCongregationStore = create((set, get) => ({
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 }));

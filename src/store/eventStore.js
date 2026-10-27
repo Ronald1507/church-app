@@ -12,7 +12,7 @@ export const useEventStore = create((set, get) => ({
     set({ loading: true, error: null, filtroEstado: null });
     try {
       const response = await api.get('/eventos');
-      const data = Array.isArray(response.data) ? response.data : [];
+      const data = Array.isArray(response.data.data) ? response.data.data : [];
       set({ eventos: data, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -22,7 +22,7 @@ export const useEventStore = create((set, get) => ({
   fetchEstados: async () => {
     try {
       const response = await api.get('/eventos/opciones');
-      const estados = response.data.estados || [];
+      const estados = response.data.data?.estados || [];
       set({ estados });
       return estados;
     } catch (error) {
@@ -35,7 +35,7 @@ export const useEventStore = create((set, get) => ({
     set({ loading: true, error: null, filtroEstado: idEstado });
     try {
       const response = await api.get(`/eventos/estado/${idEstado}`);
-      const data = Array.isArray(response.data) ? response.data : [];
+      const data = Array.isArray(response.data.data) ? response.data.data : [];
       set({ eventos: data, loading: false });
     } catch (error) {
       console.error('[fetchEventosByEstado] Error:', error);
@@ -47,14 +47,18 @@ export const useEventStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.post('/eventos', data);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al crear' };
+      }
       set((state) => ({ 
-        eventos: [...state.eventos, response.data], 
+        eventos: [...state.eventos, response.data.data], 
         loading: false 
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 
@@ -62,21 +66,29 @@ export const useEventStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.put(`/eventos/${id}`, data);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al actualizar' };
+      }
       set((state) => ({
-        eventos: state.eventos.map((e) => (e.id_evento === id ? response.data : e)),
+          eventos: state.eventos.map((e) => (e.id_evento === id ? response.data.data : e)),
         loading: false,
       }));
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 
   deleteEvento: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/eventos/${id}`);
+      const response = await api.delete(`/eventos/${id}`);
+      if (!response.data?.success) {
+        set({ loading: false });
+        return { success: false, message: response.data?.mensaje || 'Error al eliminar' };
+      }
       
       const filtroEstado = get().filtroEstado;
       
@@ -89,7 +101,7 @@ export const useEventStore = create((set, get) => ({
       return { success: true };
     } catch (error) {
       set({ error: error.message, loading: false });
-      return { success: false, message: error.response?.data?.error };
+      return { success: false, message: error.response?.data?.mensaje || error.response?.data?.error };
     }
   },
 }));
